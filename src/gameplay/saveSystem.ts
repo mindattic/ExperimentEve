@@ -15,9 +15,17 @@ export interface SaveData {
   flags: Record<string, boolean>;
   items: Partial<Record<ItemId, number>>;
   pos: [number, number];
+  /** Seconds since 8:00 PM — the night is part of the save. */
+  clockElapsed: number;
 }
 
-export function saveGame(state: GameState, inv: Inventory, x: number, z: number): void {
+export function saveGame(
+  state: GameState,
+  inv: Inventory,
+  x: number,
+  z: number,
+  clockElapsed = 0,
+): void {
   const items: Partial<Record<ItemId, number>> = {};
   for (const [def, n] of inv.entries()) items[def.id] = n;
   const data: SaveData = {
@@ -32,6 +40,7 @@ export function saveGame(state: GameState, inv: Inventory, x: number, z: number)
     flags: { ...state.flags },
     items,
     pos: [x, z],
+    clockElapsed,
   };
   try {
     localStorage.setItem(KEY, JSON.stringify(data));

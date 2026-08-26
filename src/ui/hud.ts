@@ -7,6 +7,7 @@ export class Hud {
   private readonly root: HTMLDivElement;
   private readonly bars: Record<string, HTMLDivElement> = {};
   private readonly ammoEl: HTMLDivElement;
+  private timeEl!: HTMLDivElement;
   private readonly msgEl: HTMLDivElement;
   private msgTimer = 0;
 
@@ -41,6 +42,11 @@ export class Hud {
     this.ammoEl.style.cssText = 'color:#cfd8dd;margin-top:2px';
     this.root.appendChild(this.ammoEl);
 
+    this.timeEl = document.createElement('div');
+    this.timeEl.style.cssText =
+      'position:absolute;right:14px;top:10px;font-size:13px;color:#a8b4bc;text-align:right';
+    hudRoot.appendChild(this.timeEl);
+
     this.msgEl = document.createElement('div');
     this.msgEl.style.cssText =
       'position:absolute;left:50%;transform:translateX(-50%);bottom:36px;font-size:15px;' +
@@ -54,7 +60,8 @@ export class Hud {
     this.msgTimer = 2.6;
   }
 
-  update(realDt: number, state: GameState, battle: BattleSystem): void {
+  update(realDt: number, state: GameState, battle: BattleSystem, watch?: string): void {
+    if (watch !== undefined) this.timeEl.textContent = watch;
     this.bars['HP']!.style.width = `${(state.hp / state.maxHp) * 100}%`;
     this.bars['PE']!.style.width = `${(state.pe / state.maxPe) * 100}%`;
     this.bars['LIMIT']!.style.width = `${state.limit}%`;

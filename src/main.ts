@@ -3,6 +3,7 @@ import { LowResPipeline, INTERNAL_WIDTH, INTERNAL_HEIGHT } from './render/ps1/lo
 import { ps1GlobalUniforms } from './render/ps1/ps1Material';
 import { Input } from './core/input';
 import { GameClock } from './core/clock';
+import { WorldClock } from './core/worldClock';
 import { CameraManager } from './camera/cameraManager';
 import { InputLatch } from './camera/inputLatch';
 import { PlayerController } from './player/playerController';
@@ -32,10 +33,35 @@ const pipeline = new LowResPipeline(canvas);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0a12);
 scene.fog = new THREE.Fog(0x0a0a12, 14, 60);
-scene.add(new THREE.HemisphereLight(0x9aa8c8, 0x2a201c, 1.35));
+const hemi = new THREE.HemisphereLight(0x9aa8c8, 0x2a201c, 1.35);
+scene.add(hemi);
 const moon = new THREE.DirectionalLight(0xbfd0ff, 0.45);
 moon.position.set(-4, 8, 3);
 scene.add(moon);
+
+// One night, real time: June 21, 1998, arrival 8:00 PM; dusk drains away
+// through civil twilight into full dark. Dawn (5:11 AM) is the deadline.
+const worldClock = new WorldClock();
+const DUSK = {
+  sky: new THREE.Color(0xb08868), ground: new THREE.Color(0x3a2a24),
+  fog: new THREE.Color(0x261a2e), hemiI: 1.7,
+  moonColor: new THREE.Color(0xffb070), moonI: 0.7,
+};
+const NIGHT = {
+  sky: new THREE.Color(0x9aa8c8), ground: new THREE.Color(0x2a201c),
+  fog: new THREE.Color(0x0a0a12), hemiI: 1.35,
+  moonColor: new THREE.Color(0xbfd0ff), moonI: 0.45,
+};
+function applyTimeOfDay(): void {
+  const k = Math.min(1, Math.max(0, (worldClock.darkness - 0.35) / 0.65));
+  hemi.color.lerpColors(DUSK.sky, NIGHT.sky, k);
+  hemi.groundColor.lerpColors(DUSK.ground, NIGHT.ground, k);
+  hemi.intensity = DUSK.hemiI + (NIGHT.hemiI - DUSK.hemiI) * k;
+  moon.color.lerpColors(DUSK.moonColor, NIGHT.moonColor, k);
+  moon.intensity = DUSK.moonI + (NIGHT.moonI - DUSK.moonI) * k;
+  (scene.fog as THREE.Fog).color.lerpColors(DUSK.fog, NIGHT.fog, k);
+  (scene.background as THREE.Color).copy((scene.fog as THREE.Fog).color);
+}
 
 // Level.
 const level = loadLevel(LEVEL01);
@@ -237,7 +263,8 @@ statMenu.onSave = () => {
   state.hp = state.maxHp;
   state.flags['garageSaved'] = true;
   state.flags['fireOut'] = true;
-  saveGame(state, inventory, player.position.x, player.position.z);
+  worldClock.elapsed += 8 * 60; // resting costs 8 minutes of the night
+  saveGame(state, inventory, player.position.x, player.position.z, worldClock.elapsed);
   hud.message('Saved. Outside, something changes in the light.');
   subtitles.say('The fire\'s dying down. Lucky. ...Lucky?');
 };
@@ -305,6 +332,9 @@ function frame(): void {
   }
 
   // Ambience animation.
+  worldClock.tick(realDt); // the night does not pause for menus
+  applyTimeOfDay();
+
   const t = performance.now() / 1000;
   if (state.flags['fireOut'] && fireGroup.visible) {
     fireGroup.visible = false;
@@ -327,7 +357,7 @@ function frame(): void {
   }
 
   subtitles.update(realDt);
-  hud.update(realDt, state, battle);
+  hud.update(realDt, state, battle, worldClock.timeString);
   debugLine.textContent =
     `zone: ${cameraMgr.activeZone?.id ?? '-'}  battle: ${battle.phase}  ` +
     `pad: ${sample.padConnected ? 'pad' : 'kb'}  ` +
