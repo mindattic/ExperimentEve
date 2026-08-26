@@ -27,6 +27,7 @@ import { InventoryMenu } from './ui/inventoryMenu';
 import { loadLevel, triggerContains } from './level/levelLoader';
 import { LEVEL01 } from './level/level01';
 import { buildProtestField } from './level/props/protestField';
+import { GraffitiWall } from './level/props/graffiti';
 import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
 import { WorldAI } from './enemies/worldAI';
@@ -79,6 +80,10 @@ scene.add(level.root);
 
 // The June 20th march ended here. West end of the cross street.
 scene.add(buildProtestField(-13, 0.8, -5.5, 5.2, 22));
+
+// The duel wall: REN vs SOAK, escalating as the night advances.
+const duelWall = new GraffitiWall(-9, 1.7, 0.16, 0);
+scene.add(duelWall.mesh);
 
 // Dynamic set-dressing: truck fire + lighthouse save lamp.
 const fireGroup = new THREE.Group();
@@ -217,6 +222,7 @@ let lastChimedHour = 19; // arrival at 20:00 chimes immediately — eight bells
 let lastStepIndex = 0;
 let lastHp = 80;
 let executionMark: ReturnType<ErasureSquad['executionCandidate']> = null;
+let payphoneRingT = 0;
 
 // ---- Bicycle: fast, wide turns, low durability, ram on dodge -----------
 const bikeMesh = new THREE.Group();
@@ -352,6 +358,34 @@ function handleInteract(i: Interactable): void {
       break;
     }
     case 'inspect': {
+      if (i.id === 'nest1') {
+        if (inventory.count('molotov') > 0) {
+          inventory.remove('molotov');
+          if (worldAI.destroyNestNear(i.x, i.z)) {
+            i.used = true;
+            hud.message('The clutch catches all at once. Nothing else hatches here.');
+            subtitles.say('Sorry. Not sorry. Both.');
+            state.addLimit(15);
+            input.rumble(300, 0.5, 0.8);
+          }
+        } else {
+          hud.message('A clutch of eggs, warm from the inside. Fire would end this. A molotov would do.');
+        }
+        break;
+      }
+      if (i.id === 'payphone1') {
+        if (!state.flags['payphoneAnswered']) {
+          state.flags['payphoneAnswered'] = true;
+          sfx.uiBlip();
+          subtitles.say('[click]', 1.2);
+          subtitles.say('...Breathing. Calm. Unhurried.', 2.8);
+          subtitles.say('"Keep moving, Katherine."', 3.2);
+          subtitles.say('[dial tone] ...Nobody calls me Katherine.', 3.4);
+        } else {
+          subtitles.say('Dead line. It rang once tonight. Once was the message.');
+        }
+        break;
+      }
       if (i.id === 'ansMachine1') {
         if (!state.flags['ansHeard1']) {
           state.flags['ansHeard1'] = true;
@@ -841,6 +875,19 @@ function frame(): void {
   worldClock.tick(realDt); // the night does not pause for menus
   applyTimeOfDay();
   audio.setDucked(battle.wantsPause || chiming);
+
+  // The duel wall escalates with the night.
+  duelWall.setStage(state.flags['fireOut'] ? 2 : state.flags['frogDead'] ? 1 : 0);
+
+  // The payphone rings while she's near — until she answers, once.
+  if (!state.flags['payphoneAnswered'] && mode === 'game') {
+    const d = Math.hypot(player.position.x - 12.6, player.position.z - 4.6);
+    payphoneRingT -= realDt;
+    if (d < 7 && payphoneRingT <= 0) {
+      payphoneRingT = 2.4;
+      sfx.phoneRing();
+    }
+  }
 
   // Fire crackle loudness follows proximity to the burning semi.
   if (ambienceStarted) {

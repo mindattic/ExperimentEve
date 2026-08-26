@@ -231,6 +231,8 @@ export const LEVEL01: LevelDef = {
 
     // A bicycle leaning on the east fence of street A.
     { min: [3.4, 23.6], max: [3.8, 24.6], h: 0.9, color: 0x8a4420, noCollide: true },
+    // Payphone by the pawnshop (the Observer's other channel).
+    { min: [12.3, 4.3], max: [12.9, 4.9], h: 2.2, color: 0x2a4a6a },
   ],
 
   ground: [
@@ -294,6 +296,8 @@ export const LEVEL01: LevelDef = {
       id: 'beastFlyer', x: -12, z: 16.2, prompt: 'Read the flyer on the fence', kind: 'inspect', once: false,
       inspectText: 'POCKETBEASTS CRIMSON & TEAL — COLLECT THEM ALL! Stapled to the fence. Just past it, something has been collecting.',
     },
+    { id: 'nest1', x: -12.5, z: 17, radius: 1.6, prompt: 'The nest', kind: 'inspect', once: false },
+    { id: 'payphone1', x: 12.6, z: 4.6, prompt: 'Answer the payphone', kind: 'inspect', once: false },
     {
       id: 'grill1', x: -11.7, z: 21.5, prompt: 'Look at the grill', kind: 'inspect', once: false,
       inspectText: 'The grill is cold. Plates set for five. The cookout stopped between the second and third burger.',

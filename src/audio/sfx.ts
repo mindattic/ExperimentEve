@@ -70,6 +70,14 @@ export class Sfx {
     this.a.tone({ from: 1200, duration: 0.03, type: 'square', gain: 0.08 });
   }
 
+  /** 1998 payphone: two-burst mechanical bell ring. */
+  phoneRing(): void {
+    for (const delay of [0, 90, 180, 270]) {
+      setTimeout(() => this.a.tone({ from: 1480, duration: 0.07, type: 'square', gain: 0.16 }), delay);
+      setTimeout(() => this.a.tone({ from: 1180, duration: 0.07, type: 'square', gain: 0.16 }), delay + 45);
+    }
+  }
+
   /** Axe through boards: low wood crack. */
   chop(): void {
     this.a.noiseBurst({ duration: 0.12, filterFrom: 600, filterTo: 150, gain: 0.7 });

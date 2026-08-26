@@ -76,6 +76,23 @@ export class WorldAI {
   /** Set when a wanderer reaches the player: main starts a battle with them. */
   onPlayerContact: ((enemies: Enemy[]) => void) | null = null;
 
+  /** Burn/destroy the nearest nest within `radius`. Returns true if one died. */
+  destroyNestNear(x: number, z: number, radius = 2.5): boolean {
+    for (const n of this.nests) {
+      if (!n.destroyed && Math.hypot(n.def.x - x, n.def.z - z) < radius) {
+        n.destroyed = true;
+        // Scorch: flatten and blacken the clutch.
+        n.mesh.scale.set(1.1, 0.25, 1.1);
+        n.mesh.traverse((o) => {
+          const m = (o as THREE.Mesh).material as THREE.MeshLambertMaterial | undefined;
+          if (m?.isMeshLambertMaterial) m.color.setHex(0x1c1814);
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+
   private readonly alarmPos = new THREE.Vector3();
   private alarmTimer = 0;
 
