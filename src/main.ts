@@ -18,6 +18,7 @@ import { CrowSpider } from './enemies/spider';
 import { StatMenu } from './ui/statMenu';
 import { saveGame, loadGame, hasSave, applySave } from './gameplay/saveSystem';
 import { TitleScreen } from './ui/titleScreen';
+import { ApertureOS } from './ui/apertureOS';
 import type { Collider } from './physics/colliders';
 import { Hud } from './ui/hud';
 import { Subtitles } from './ui/subtitles';
@@ -28,6 +29,7 @@ import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
 import { WorldAI } from './enemies/worldAI';
 import { ScareDirector } from './gameplay/scares';
+import { ErasureSquad } from './gameplay/erasureSquad';
 
 // ---- Experiment Eve — Kat Weiss in the Newport North End (M9/M10 greybox).
 
@@ -116,6 +118,32 @@ const subtitles = new Subtitles(hudEl);
 const invMenu = new InventoryMenu(hudEl);
 invMenu.onMessage = (t) => hud.message(t);
 const statMenu = new StatMenu(hudEl);
+
+// The garage save point: a CRT running ApertureOS 98.
+const os = new ApertureOS(hudEl);
+const garageMachine = {
+  owner: 'NORTH-END SALVAGE',
+  files: [
+    {
+      name: 'shift_log.txt',
+      body: '6/19 - tow calls all day. brakes, brakes, brakes.\n6/20 - no calls. everybody at the march.\n6/21 - Ray took the flatbed out to the bridge approach.\nHe did not bring it back.',
+    },
+    {
+      name: 'note_to_ray.txt',
+      body: 'Ray -\nIf you get back before me, the lamp in the bay works.\nKeep it lit. People walk toward light.\nThat is all we can do now.\n- M.',
+    },
+    {
+      name: 'march_flyer.txt',
+      body: 'JUNE 20 - CITY HALL TO THE PIER\nBRING EVERYONE. IT IS OUR WATER TOO.\nTHEY CANNOT ERASE ALL OF US.',
+      deleted: true,
+    },
+    {
+      name: 'refund_draft.txt',
+      body: 'To Aperture Systems:\nMy copy of ApertureOS 98 crashes when I open more than two windows.\nRequesting refund.\n(draft - unsent - revision 14)',
+      deleted: true,
+    },
+  ],
+};
 const battle = new BattleSystem(state, scene, hudEl, canvas);
 battle.onMessage = (t) => hud.message(t);
 
@@ -164,6 +192,7 @@ let chime: ChimeState | null = null;
 let lastChimedHour = 19; // arrival at 20:00 chimes immediately — eight bells
 let lastStepIndex = 0;
 let lastHp = 80;
+let executionMark: ReturnType<ErasureSquad['executionCandidate']> = null;
 function hourOf(minutes: number): number {
   return Math.floor(minutes / 60);
 }
@@ -245,9 +274,9 @@ function handleInteract(i: Interactable): void {
     case 'save': {
       if (!state.flags['lampSeen']) {
         state.flags['lampSeen'] = true;
-        subtitles.say('A lighthouse lamp, in a garage. Someone dragged this here.');
+        subtitles.say('A lighthouse lamp. And a computer that still has power.');
       }
-      statMenu.toggle();
+      os.boot(garageMachine);
       break;
     }
   }
@@ -317,7 +346,11 @@ battle.onVictory = () => {
   }
 };
 
-statMenu.onSave = () => {
+os.onPerks = () => statMenu.toggle();
+os.onBlip = () => sfx.uiBlip();
+os.onSave = () => doSave();
+statMenu.onSave = () => doSave();
+function doSave(): void {
   state.hp = state.maxHp;
   state.flags['garageSaved'] = true;
   state.flags['fireOut'] = true;
@@ -358,6 +391,50 @@ worldAI.onPlayerContact = (enemies) => {
   }
 };
 
+// ---- Erasure squad vignette: coffee at the barrel, one at the pylon ---
+const squad = new ErasureSquad(scene);
+squad.spawn([
+  { x: -10.6, z: -19.2, facing: 0.5, offGuard: false }, // coffee, watching the street east
+  { x: -9.4, z: -19.8, facing: 1.6, offGuard: false }, // coffee, facing his buddy/east
+  { x: -11.2, z: -24.0, facing: Math.PI, offGuard: true }, // peeing on the pylon
+]);
+const barrel = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.4, 0.4, 0.9, 7),
+  makeBarrelMaterial(),
+);
+barrel.position.set(-10, 0.45, -19.5);
+scene.add(barrel);
+function makeBarrelMaterial(): THREE.MeshLambertMaterial {
+  return new THREE.MeshLambertMaterial({ color: 0x5a4a34, emissive: 0x672c10, emissiveIntensity: 0.5 });
+}
+squad.onAlert = (enemies, executed) => {
+  currentEncounter = 'none';
+  if (executed) {
+    sfx.gunshot();
+    hud.message('EXECUTION — one down before it starts.');
+    subtitles.say('One less.');
+    state.addLimit(40);
+  } else {
+    subtitles.say('"CONTAMINANT! WEAPONS FREE!"');
+  }
+  window.setTimeout(() => battle.start(enemies.filter((e) => !e.dead)), executed ? 900 : 200);
+};
+
+// ---- Train intro: she rides in, jumps, the train doesn't stop ----------
+let introTimer = 0;
+const train = new THREE.Group();
+{
+  const trainMat = new THREE.MeshLambertMaterial({ color: 0x3a4048 });
+  for (let i = 0; i < 3; i++) {
+    const car = new THREE.Mesh(new THREE.BoxGeometry(7, 2.6, 2.2, 5, 2, 2), trainMat);
+    car.position.set(-i * 7.6, 1.5, 0);
+    train.add(car);
+  }
+  train.position.set(-46, 0, 35.9);
+  train.visible = false;
+  scene.add(train);
+}
+
 // ---- Title / death / game-mode flow ----------------------------------
 type GameMode = 'title' | 'game' | 'dead';
 let mode: GameMode = 'title';
@@ -366,6 +443,9 @@ const title = new TitleScreen(hudEl);
 function startNewGame(): void {
   mode = 'game';
   title.hide();
+  introTimer = 3.4;
+  train.visible = true;
+  train.position.x = -46;
 }
 
 function continueGame(): void {
@@ -423,7 +503,7 @@ if (sessionStorage.getItem('eve-auto-continue') === '1' && hasSave()) {
 (window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player, worldAI };
 
 function frame(): void {
-  const menuOpen = invMenu.open || statMenu.open;
+  const menuOpen = invMenu.open || statMenu.open || os.open;
   const chiming = chime !== null;
   gameClock.timeScale = battle.wantsPause || menuOpen || chiming || mode !== 'game' ? 0 : 1;
   const { realDt, gameDt } = gameClock.tick();
@@ -444,7 +524,11 @@ function frame(): void {
   const moveDir = latch.update(sample, cameraMgr.activeZone);
 
   // Menus (pause the world).
-  if (statMenu.open) {
+  if (os.open) {
+    os.clockText = worldClock.timeString;
+    os.update(sample);
+    latch.reset();
+  } else if (statMenu.open) {
     statMenu.update(sample, state);
     latch.reset();
   } else if (invMenu.open) {
@@ -472,6 +556,13 @@ function frame(): void {
       }
     }
     state.regen(gameDt);
+    // Erasure vignette: detection + the Execution opener.
+    squad.update(gameDt, player.position, moveDir ? sample.magnitude : 0);
+    executionMark = squad.executionCandidate(player.position);
+    if (executionMark && sample.confirmJust) {
+      squad.execute(executionMark);
+      executionMark = null;
+    }
   }
   worldAI.update(gameDt, player.position, colliders, battle.active);
   scares.update(gameDt);
@@ -497,12 +588,15 @@ function frame(): void {
   }
   lastHp = state.hp;
 
-  // Interact.
+  // Interact / execution prompt.
   const near = !battle.active && !menuOpen ? nearestInteractable() : null;
   if (near) {
     promptEl.textContent = `${sample.padConnected ? 'X' : 'E'}: ${near.prompt}`;
     promptEl.style.display = 'block';
     if (sample.interactJust) handleInteract(near);
+  } else if (executionMark) {
+    promptEl.textContent = `${sample.padConnected ? 'A' : 'Enter'}: Execute`;
+    promptEl.style.display = 'block';
   } else {
     promptEl.style.display = 'none';
   }
@@ -518,9 +612,37 @@ function frame(): void {
     ambience.setFireIntensity(state.flags['fireOut'] ? 0 : Math.max(0, 1 - fireDist / 22));
   }
 
+  // Train intro: she rides in on the freight line and bails.
+  if (introTimer > 0) {
+    introTimer -= realDt;
+    player.locked = true;
+    train.position.x += 15 * realDt;
+    const jumpK = Math.min(1, Math.max(0, (3.4 - introTimer - 1.5) / 0.7));
+    if (jumpK <= 0) {
+      // Riding the lead car's doorway.
+      player.position.set(train.position.x + 1.5, 1.2, 34.6);
+    } else {
+      // The jump: arc from the moving car down to the gravel.
+      const fromX = train.position.x + 1.5;
+      player.position.x = fromX + (0 - fromX) * jumpK * 0.25 + 0; // she lands where she lands
+      player.position.x = jumpK < 1 ? fromX * (1 - jumpK) + 0 * jumpK : 0;
+      player.position.z = 34.6 + (36 - 34.6) * jumpK;
+      player.position.y = Math.max(0, Math.sin(jumpK * Math.PI) * 0.9 + (1 - jumpK) * 1.2);
+      player.facing = Math.PI;
+    }
+    if (introTimer <= 0) {
+      player.position.set(0, 0, 36);
+      player.position.y = 0;
+    }
+  }
+  if (train.visible && introTimer <= 0) {
+    train.position.x += 15 * realDt; // keeps going without her
+    if (train.position.x > 70) train.visible = false;
+  }
+
   // Hourly chime: freeze, count the bells, read the curse.
   const nowHour = hourOf(worldClock.minutesOfDay);
-  if (!chime && nowHour > lastChimedHour && audio.unlocked) {
+  if (!chime && nowHour > lastChimedHour && audio.unlocked && introTimer <= 0) {
     lastChimedHour = nowHour;
     const h12 = nowHour % 12 === 0 ? 12 : nowHour % 12;
     chime = { count: h12, played: 0, timer: 0.8, msgTimer: -1 };
