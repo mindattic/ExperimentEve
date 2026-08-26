@@ -13,7 +13,7 @@ export class Hud {
 
   constructor(hudRoot: HTMLElement) {
     this.root = document.createElement('div');
-    this.root.style.cssText = 'position:absolute;left:14px;top:10px;width:190px;font-size:12px';
+    this.root.style.cssText = 'position:absolute;left:14px;top:10px;width:190px;font-size:12px;z-index:8';
     hudRoot.appendChild(this.root);
 
     for (const [key, color] of [
@@ -47,12 +47,12 @@ export class Hud {
     this.timeEl = document.createElement('div');
     this.timeEl.style.cssText =
       'position:absolute;right:16px;bottom:14px;font-size:15px;color:#c8d0d8;text-align:right;' +
-      'background:rgba(4,8,14,.55);padding:2px 10px;letter-spacing:1px';
+      'background:rgba(4,8,14,.55);padding:2px 10px;letter-spacing:1px;z-index:8';
     hudRoot.appendChild(this.timeEl);
 
     this.msgEl = document.createElement('div');
     this.msgEl.style.cssText =
-      'position:absolute;left:50%;transform:translateX(-50%);bottom:36px;font-size:15px;' +
+      'position:absolute;left:50%;transform:translateX(-50%);bottom:36px;font-size:15px;z-index:8;' +
       'color:#e8e0c8;background:rgba(4,8,14,.7);padding:4px 14px;display:none;white-space:nowrap';
     hudRoot.appendChild(this.msgEl);
   }

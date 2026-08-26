@@ -7,7 +7,7 @@ export class Subtitles {
   constructor(hudRoot: HTMLElement) {
     this.el = document.createElement('div');
     this.el.style.cssText =
-      'position:absolute;left:50%;transform:translateX(-50%);bottom:84px;font-size:17px;' +
+      'position:absolute;left:50%;transform:translateX(-50%);bottom:84px;font-size:17px;z-index:8;' +
       'color:#f0ead2;text-shadow:1px 1px 0 #000,0 0 8px #000;display:none;white-space:nowrap;' +
       'font-style:italic';
     hudRoot.appendChild(this.el);

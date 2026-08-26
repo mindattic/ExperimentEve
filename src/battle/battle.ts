@@ -94,7 +94,7 @@ export class BattleSystem {
 
     this.menuEl = document.createElement('div');
     this.menuEl.style.cssText =
-      'position:absolute;left:14px;bottom:64px;font-size:15px;line-height:1.5;display:none;' +
+      'position:absolute;left:14px;bottom:64px;font-size:15px;line-height:1.5;display:none;z-index:8;' +
       'background:rgba(4,8,14,.82);border:1px solid #4a6a7a;padding:8px 14px;min-width:170px';
     hudRoot.appendChild(this.menuEl);
 
@@ -105,6 +105,25 @@ export class BattleSystem {
     this.sweepVEl = document.createElement('div');
     this.sweepVEl.style.cssText = lineCss + 'width:2px;';
     hudRoot.append(this.sweepHEl, this.sweepVEl);
+
+    // Cinematic letterbox: the frame narrows when a fight starts.
+    const barCss =
+      'position:absolute;left:0;right:0;height:0;background:#000;pointer-events:none;' +
+      'transition:height .35s ease-out;z-index:5';
+    this.barTop = document.createElement('div');
+    this.barTop.style.cssText = barCss + ';top:0';
+    this.barBottom = document.createElement('div');
+    this.barBottom.style.cssText = barCss + ';bottom:0';
+    hudRoot.append(this.barTop, this.barBottom);
+  }
+
+  private readonly barTop!: HTMLDivElement;
+  private readonly barBottom!: HTMLDivElement;
+
+  private setLetterbox(on: boolean): void {
+    const h = on ? '7%' : '0';
+    this.barTop.style.height = h;
+    this.barBottom.style.height = h;
   }
 
   get active(): boolean {
@@ -129,6 +148,7 @@ export class BattleSystem {
   }
 
   start(enemies: Enemy[]): void {
+    this.setLetterbox(true);
     this.enemies = enemies;
     for (const e of enemies) {
       if (!e.object.parent) this.scene.add(e.object);
@@ -782,6 +802,7 @@ export class BattleSystem {
   }
 
   private end(): void {
+    this.setLetterbox(false);
     for (const e of this.enemies) {
       if (e.dead) this.scene.remove(e.object);
     }
