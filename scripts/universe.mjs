@@ -7,10 +7,16 @@
 //   npm run universe -- get <id>
 //   npm run universe -- search <text>
 //   npm run universe -- stats
+//   npm run universe -- pull        (Prose Hub -> universe/eve.prose-snapshot.json)
+//   npm run universe -- push        (prose.cmd --universe-import <this file>)
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+
+const HUB = 'http://127.0.0.1:5900';
+const PROSE_CMD = 'D:\\Projects\\MindAttic\\Prose\\prose.cmd';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const file = join(here, '..', 'universe', 'eve.universe.json');
@@ -77,6 +83,28 @@ switch (cmd) {
     for (const [t, n] of Object.entries(byType).sort()) console.log(`  ${t.padEnd(12)} ${n}`);
     break;
   }
+  case 'pull': {
+    try {
+      const res = await fetch(`${HUB}/api/universes/EVE/snapshot`);
+      if (!res.ok) fail(`Hub answered ${res.status} — has /eve run in the Prose CLI yet?`);
+      const snap = await res.json();
+      const out = join(here, '..', 'universe', 'eve.prose-snapshot.json');
+      writeFileSync(out, JSON.stringify(snap, null, 2));
+      console.log(`Pulled Prose snapshot -> ${out} (${snap.nodes?.length ?? '?'} nodes, ${snap.edges?.length ?? '?'} edges)`);
+    } catch (e) {
+      fail(`Prose Hub not reachable at ${HUB} (${e.message}). Start it, or run /eve in the Prose CLI first.`);
+    }
+    break;
+  }
+  case 'push': {
+    const r = spawnSync('cmd.exe', ['/c', PROSE_CMD, '--universe-import', file], {
+      stdio: 'inherit',
+    });
+    if (r.status !== 0) {
+      fail('push failed — prose --universe-import is built by RFC 0007 (/eve in the Prose CLI).');
+    }
+    break;
+  }
   default:
-    fail(`unknown command '${cmd}' (validate | list [type] | get <id> | search <text> | stats)`);
+    fail(`unknown command '${cmd}' (validate | list [type] | get <id> | search <text> | stats | pull | push)`);
 }
