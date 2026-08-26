@@ -249,5 +249,8 @@ export const LEVEL01: LevelDef = {
     { id: 'frogStreet', polygon: [[-4, -10], [4, -10], [4, -4], [-4, -4]], once: true },
     { id: 'blockadeSwarm', polygon: [[-10, -25], [4, -25], [4, -18], [-10, -18]], once: true },
     { id: 'sliceEnd', polygon: [[-14, -30], [6, -30], [6, -27], [-14, -27]], once: true },
+    { id: 'catScare', polygon: [[-4, 8], [4, 8], [4, 12], [-4, 12]], once: true },
+    { id: 'shutterScare', polygon: [[-4.5, 21.5], [-3, 21.5], [-3, 24.5], [-4.5, 24.5]], once: true },
+    { id: 'dogFence', polygon: [[22.5, -16], [26.5, -16], [26.5, -10], [22.5, -10]], once: true },
   ],
 };

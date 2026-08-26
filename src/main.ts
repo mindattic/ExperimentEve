@@ -26,6 +26,8 @@ import { loadLevel, triggerContains } from './level/levelLoader';
 import { LEVEL01 } from './level/level01';
 import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
+import { WorldAI } from './enemies/worldAI';
+import { ScareDirector } from './gameplay/scares';
 
 // ---- Experiment Eve — Kat Weiss in the Newport North End (M9/M10 greybox).
 
@@ -284,6 +286,18 @@ function fireTrigger(id: string): void {
       hud.message('SLICE COMPLETE — the route continues toward the bridge.');
       break;
     }
+    case 'catScare':
+      scares.catDash(-3.8, 3.8, player.position.z - 2.5);
+      break;
+    case 'shutterScare':
+      scares.shutterBang();
+      subtitles.say('...Just a shutter. Just wind.');
+      input.rumble(220, 0.5, 0.9);
+      break;
+    case 'dogFence':
+      scares.dogFence(19, 23, -12);
+      subtitles.say('The fence. The fence is holding. It\'s holding.');
+      break;
   }
 }
 
@@ -307,6 +321,7 @@ statMenu.onSave = () => {
   state.hp = state.maxHp;
   state.flags['garageSaved'] = true;
   state.flags['fireOut'] = true;
+  worldAI.resetOnSave(); // the lighthouse rule: the streets restock
   worldClock.elapsed += 8 * 60; // resting costs 8 minutes of the night
   sfx.saveChime();
   saveGame(state, inventory, player.position.x, player.position.z, worldClock.elapsed);
@@ -321,6 +336,27 @@ function activeColliders(): readonly Collider[] {
   }
   return cols;
 }
+
+// ---- Living world: wanderers, packs, nests, prey ----------------------
+const worldAI = new WorldAI(scene);
+const scares = new ScareDirector(scene, sfx);
+// Rat-gull scavengers pick over the tracks.
+worldAI.addWanderer({ species: 'ratGull', x: -6, z: 34, region: { minX: -13, minZ: 31, maxX: 13, maxZ: 39 }, packId: 'gulls' });
+worldAI.addWanderer({ species: 'ratGull', x: 6, z: 35, region: { minX: -13, minZ: 31, maxX: 13, maxZ: 39 }, packId: 'gulls' });
+// A stray tentacled doberman patrols the south street — cross-faction bait.
+worldAI.addWanderer({ species: 'tentacleDoberman', x: 0, z: -14, region: { minX: -3, minZ: -16, maxX: 3, maxZ: -1 } });
+// A hush fox haunts the CCTV cross street (it shows plainly on the lens).
+worldAI.addWanderer({ species: 'hushFox', x: 10, z: 3, region: { minX: -13, minZ: 0.5, maxX: 13, maxZ: 5.5 } });
+// Crow-spider nest in a backyard keeps juveniles trickling into street A.
+worldAI.addNest({ species: 'crowSpider', x: -12.5, z: 17, capacity: 2, intervalSec: 45, region: { minX: -13, minZ: 7, maxX: 3, maxZ: 28 } });
+worldAI.addRats(7, 0, 32, 16);
+worldAI.onPlayerContact = (enemies) => {
+  if (!battle.active) {
+    currentEncounter = 'none';
+    battle.start(enemies);
+    subtitles.say(enemies.length > 1 ? 'A pack—' : 'It sees her.');
+  }
+};
 
 // ---- Title / death / game-mode flow ----------------------------------
 type GameMode = 'title' | 'game' | 'dead';
@@ -384,7 +420,7 @@ if (sessionStorage.getItem('eve-auto-continue') === '1' && hasSave()) {
 }
 
 // Dev console handle (also used by automated drive tests).
-(window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player };
+(window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player, worldAI };
 
 function frame(): void {
   const menuOpen = invMenu.open || statMenu.open;
@@ -437,6 +473,8 @@ function frame(): void {
     }
     state.regen(gameDt);
   }
+  worldAI.update(gameDt, player.position, colliders, battle.active);
+  scares.update(gameDt);
   player.update(gameDt, moveDir, sample.magnitude, colliders);
   rig.pose = battle.phase === 'fire' ? 'aim' : 'explore';
   const moving = moveDir !== null && !player.locked;
