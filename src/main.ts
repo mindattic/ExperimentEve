@@ -142,6 +142,15 @@ const garageMachine = {
       body: 'To Aperture Systems:\nMy copy of ApertureOS 98 crashes when I open more than two windows.\nRequesting refund.\n(draft - unsent - revision 14)',
       deleted: true,
     },
+    {
+      name: 'dialer_log.txt',
+      body: 'AMERIGATE ONLINE - SESSION LOG\n6/19 CONNECT 28.8k ... 4hrs (Ray downloading the Bigger Rock trailer)\n6/20 CONNECT 28.8k ... CARRIER LOST 11:52 PM\n6/20 REDIAL ... NO DIAL TONE\n6/21 REDIAL ... NO DIAL TONE\nYou have got nothing.',
+    },
+    {
+      name: 'finestein.txt',
+      body: 'WHERE IS MY FINESTEIN TAPE, RAY.\nI taped the finale May 14. The tape is GONE.\nThe label is still on the shelf. The LABEL, Ray.\nWho steals the tape and leaves the label.',
+      deleted: true,
+    },
   ],
 };
 const battle = new BattleSystem(state, scene, hudEl, canvas);
@@ -233,6 +242,17 @@ function nearestInteractable(): Interactable | null {
 function handleInteract(i: Interactable): void {
   switch (i.kind) {
     case 'container': {
+      // The Blue Dress: always hanging in the first closet she searches.
+      if (i.containerType === 'closet' && !state.flags['blueDressFound']) {
+        state.flags['blueDressFound'] = true;
+        inventory.add('blueDress');
+        subtitles.say('I don\'t think it\'s my size...', 2.6);
+        subtitles.say('...and what is that STAIN?!', 2.8);
+        hud.message('Found: The Blue Dress');
+        sfx.pickup();
+        i.used = true;
+        break;
+      }
       const loot = rollLoot(i);
       if (loot.length === 0) {
         hud.message('Nothing useful.');
@@ -255,6 +275,19 @@ function handleInteract(i: Interactable): void {
       break;
     }
     case 'inspect': {
+      if (i.id === 'ansMachine1') {
+        if (!state.flags['ansHeard1']) {
+          state.flags['ansHeard1'] = true;
+          sfx.uiBlip();
+          subtitles.say('[click] "Hi, you\'ve reached the Ansons! We\'re out, or—"', 3.2);
+          subtitles.say('"—or at the march! Leave it at the beep!" [beep]', 3.2);
+          subtitles.say('47 unheard messages. All from MEGAHIT VIDEO.', 3.4);
+          subtitles.say('Sinking Ship, tape two. $4.50 a night. Forever.', 3.2);
+        } else {
+          subtitles.say('The tape is full. The machine keeps blinking anyway.');
+        }
+        break;
+      }
       if (i.id === 'tub-house1') {
         if (!state.flags['tubUsed1']) {
           state.flags['tubUsed1'] = true;
@@ -374,8 +407,8 @@ function activeColliders(): readonly Collider[] {
 const worldAI = new WorldAI(scene);
 const scares = new ScareDirector(scene, sfx);
 // Rat-gull scavengers pick over the tracks.
-worldAI.addWanderer({ species: 'ratGull', x: -6, z: 34, region: { minX: -13, minZ: 31, maxX: 13, maxZ: 39 }, packId: 'gulls' });
-worldAI.addWanderer({ species: 'ratGull', x: 6, z: 35, region: { minX: -13, minZ: 31, maxX: 13, maxZ: 39 }, packId: 'gulls' });
+worldAI.addWanderer({ species: 'ratGull', x: -8, z: 34, region: { minX: -13, minZ: 31, maxX: 13, maxZ: 39 }, packId: 'gulls', aggro: 'skittish' });
+worldAI.addWanderer({ species: 'ratGull', x: 8, z: 35, region: { minX: -13, minZ: 31, maxX: 13, maxZ: 39 }, packId: 'gulls', aggro: 'skittish' });
 // A stray tentacled doberman patrols the south street — cross-faction bait.
 worldAI.addWanderer({ species: 'tentacleDoberman', x: 0, z: -14, region: { minX: -3, minZ: -16, maxX: 3, maxZ: -1 } });
 // A hush fox haunts the CCTV cross street (it shows plainly on the lens).
@@ -557,7 +590,7 @@ function frame(): void {
     }
     state.regen(gameDt);
     // Erasure vignette: detection + the Execution opener.
-    squad.update(gameDt, player.position, moveDir ? sample.magnitude : 0);
+    squad.update(gameDt, player.position, moveDir ? sample.magnitude : 0, colliders);
     executionMark = squad.executionCandidate(player.position);
     if (executionMark && sample.confirmJust) {
       squad.execute(executionMark);

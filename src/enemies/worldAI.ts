@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Enemy } from './enemyBase';
 import { spawnEnemy } from './registry';
 import { makePS1Material } from '../render/ps1/ps1Material';
-import { resolveCircle, type Collider } from '../physics/colliders';
+import { resolveCircle, lineBlocked, type Collider } from '../physics/colliders';
 
 // A-Life, STALKER scaled way down: chimeras wander the district, hunt in
 // packs, fight other factions to the death or until morale breaks, eat what
@@ -15,6 +15,8 @@ export interface WandererDef {
   z: number;
   region: { minX: number; minZ: number; maxX: number; maxZ: number };
   packId?: string;
+  /** hunters pull the player into battle; skittish ones bolt instead. */
+  aggro?: 'hunter' | 'skittish';
 }
 
 export interface NestDef {
@@ -216,8 +218,24 @@ export class WorldAI {
         }
       }
 
-      // Player contact pulls the hunt into a real battle.
-      if (!playerInBattle && pos.distanceTo(playerPos) < 3.2) {
+      // Skittish species bolt from the player instead of engaging.
+      if (
+        (w.def.aggro ?? 'hunter') === 'skittish' &&
+        w.mode === 'wander' &&
+        pos.distanceTo(playerPos) < 4
+      ) {
+        w.mode = 'flee';
+        w.opponent = null;
+        w.modeTimer = 2.5;
+      }
+      // Player contact pulls the hunt into a real battle (needs sightline —
+      // no aggro through house walls).
+      if (
+        !playerInBattle &&
+        (w.def.aggro ?? 'hunter') === 'hunter' &&
+        pos.distanceTo(playerPos) < 3.2 &&
+        !lineBlocked(pos.x, pos.z, playerPos.x, playerPos.z, colliders)
+      ) {
         const packmates = this.wanderers.filter(
           (o) => o !== w && !o.enemy.dead && o.def.packId && o.def.packId === w.def.packId &&
             o.enemy.object.position.distanceTo(pos) < 9,

@@ -29,6 +29,43 @@ export function wall(cx: number, cz: number, w: number, d: number): AABBCollider
   return aabb(cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2);
 }
 
+/** True if the straight line a→b crosses any collider (2D occlusion). */
+export function lineBlocked(
+  ax: number, az: number, bx: number, bz: number,
+  colliders: readonly Collider[],
+): boolean {
+  for (const c of colliders) {
+    if (c.kind === 'segment') {
+      if (segmentsIntersect(ax, az, bx, bz, c.ax, c.az, c.bx, c.bz)) return true;
+    } else {
+      if (
+        segmentsIntersect(ax, az, bx, bz, c.minX, c.minZ, c.maxX, c.minZ) ||
+        segmentsIntersect(ax, az, bx, bz, c.maxX, c.minZ, c.maxX, c.maxZ) ||
+        segmentsIntersect(ax, az, bx, bz, c.maxX, c.maxZ, c.minX, c.maxZ) ||
+        segmentsIntersect(ax, az, bx, bz, c.minX, c.maxZ, c.minX, c.minZ)
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function segmentsIntersect(
+  ax: number, az: number, bx: number, bz: number,
+  cx: number, cz: number, dx: number, dz: number,
+): boolean {
+  const d1 = cross(cx, cz, dx, dz, ax, az);
+  const d2 = cross(cx, cz, dx, dz, bx, bz);
+  const d3 = cross(ax, az, bx, bz, cx, cz);
+  const d4 = cross(ax, az, bx, bz, dx, dz);
+  return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
+}
+
+function cross(ax: number, az: number, bx: number, bz: number, px: number, pz: number): number {
+  return (bx - ax) * (pz - az) - (bz - az) * (px - ax);
+}
+
 const ITERATIONS = 3;
 
 /** Mutates pos (x,z used) to push a circle of `radius` out of all colliders. */

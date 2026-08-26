@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ErasureTrooper } from '../enemies/erasureTrooper';
 import type { Enemy } from '../enemies/enemyBase';
+import { lineBlocked, type Collider } from '../physics/colliders';
 
 // Off-guard Erasure vignette: a squad caught slacking (coffee at a barrel,
 // one peeing against a pylon). Detection = view cone + noise. Approach the
@@ -61,7 +62,12 @@ export class ErasureSquad {
     this.alert(true);
   }
 
-  update(gameDt: number, playerPos: THREE.Vector3, playerSpeed01: number): void {
+  update(
+    gameDt: number,
+    playerPos: THREE.Vector3,
+    playerSpeed01: number,
+    colliders: readonly Collider[] = [],
+  ): void {
     if (this.state !== 'vignette' || gameDt <= 0) return;
     for (const m of this.alive) {
       // Idle theater: sway, shift weight; the off-guard one faces his wall.
@@ -76,7 +82,12 @@ export class ErasureSquad {
       const heard = dist < noiseRadius;
       // Sight: view cone (off-guard members don't watch).
       const facingVec = new THREE.Vector3(Math.sin(m.facing), 0, Math.cos(m.facing));
-      const seen = !m.offGuard && dist < VIEW_DIST && facingVec.dot(to.clone().normalize()) > VIEW_ANGLE;
+      const pos = m.trooper.object.position;
+      const seen =
+        !m.offGuard &&
+        dist < VIEW_DIST &&
+        facingVec.dot(to.clone().normalize()) > VIEW_ANGLE &&
+        !lineBlocked(pos.x, pos.z, playerPos.x, playerPos.z, colliders);
       if (heard || seen) {
         this.alert(false);
         return;

@@ -6,7 +6,10 @@ export type ItemId =
   // consumables / ammo
   | 'ammo9' | 'medkit'
   // baubles (pawnshop currency)
-  | 'pocketWatch' | 'pearlNecklace' | 'ring' | 'silverware';
+  | 'pocketWatch' | 'pearlNecklace' | 'ring' | 'silverware'
+  // 1998 nostalgia baubles (also pawnable)
+  | 'pager' | 'durpy' | 'beanBuddy' | 'pocketPal' | 'vhsSinkingShip' | 'cdHeartGoes'
+  | 'blueDress';
 
 export type ItemCategory = 'component' | 'crafted' | 'consumable' | 'ammo' | 'bauble';
 
@@ -74,6 +77,34 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   silverware: {
     id: 'silverware', name: 'Silverware', category: 'bauble',
     desc: 'A full set. The table was laid for four when they stopped eating.',
+  },
+  pager: {
+    id: 'pager', name: 'PageMate Pager', category: 'bauble',
+    desc: '407-555-2689. Somebody still pages it every hour, on the hour. Exactly on the hour.',
+  },
+  durpy: {
+    id: 'durpy', name: 'Durpy', category: 'bauble',
+    desc: 'Batteries dying. It has started saying a word nobody taught it.',
+  },
+  beanBuddy: {
+    id: 'beanBuddy', name: 'Bean Buddy (Rare?)', category: 'bauble',
+    desc: 'Tag protector intact. The tag promised it would be valuable someday. Someday was cancelled.',
+  },
+  pocketPal: {
+    id: 'pocketPal', name: 'Pocket Pal', category: 'bauble',
+    desc: 'It starved on the 20th. It beeps anyway. It forgives you.',
+  },
+  vhsSinkingShip: {
+    id: 'vhsSinkingShip', name: 'SINKING SHIP (Tape 2 of 2)', category: 'bauble',
+    desc: 'BE KIND — REWIND. Nobody rewound. Nobody was kind. Late fee: $4.50 a night, forever.',
+  },
+  cdHeartGoes: {
+    id: 'cdHeartGoes', name: '"My Heart Keeps Going" CD Single', category: 'bauble',
+    desc: 'Saline Lyon. The song from the boat movie. Every radio still playing is playing it.',
+  },
+  blueDress: {
+    id: 'blueDress', name: 'The Blue Dress', category: 'bauble',
+    desc: 'Navy blue. Dry-clean only. It has been through something historic. The pawnbroker pays double and asks nothing.',
   },
 };
 

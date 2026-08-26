@@ -184,6 +184,8 @@ export const LEVEL01: LevelDef = {
     { min: [-9.6, 19.3], max: [-7.9, 20.2], h: 0.55, color: 0xb8bcc0 }, // bathtub
     { min: [-4.9, 25.9], max: [-4.2, 27], h: 1.6, color: 0x5d4a3c }, // shelf
     { min: [-6.6, 19.2], max: [-4.9, 20], h: 0.9, color: 0x707a80 }, // kitchen sink counter
+    { min: [-5, 22.7], max: [-4.4, 23.3], h: 0.75, color: 0x6a6258 }, // phone table + answering machine
+    { min: [-8, 23.2], max: [-7.2, 24.4], h: 2.1, color: 0x5a4c40 }, // bedroom closet
 
     // South street trash.
     { min: [3.1, -4.4], max: [3.9, -3.6], h: 1, color: 0x4e565c },
@@ -220,6 +222,7 @@ export const LEVEL01: LevelDef = {
   interactables: [
     { id: 'nightstand1', x: -10.3, z: 26, prompt: 'Search the nightstand', kind: 'container', roomType: 'bedroom', containerType: 'nightstand' },
     { id: 'dresser1', x: -7.7, z: 26.1, prompt: 'Search the dresser', kind: 'container', roomType: 'bedroom', containerType: 'dresser' },
+    { id: 'closet1', x: -7.9, z: 23.8, prompt: 'Search the closet', kind: 'container', roomType: 'bedroom', containerType: 'closet' },
     { id: 'bathcab1', x: -10.4, z: 20.2, prompt: 'Search the medicine cabinet', kind: 'container', roomType: 'bathroom', containerType: 'cabinet' },
     { id: 'tub-house1', x: -8.7, z: 20.5, prompt: 'Draw a bath', kind: 'inspect', once: false },
     { id: 'shelf1', x: -5.1, z: 26.2, prompt: 'Search the shelf', kind: 'container', roomType: 'living', containerType: 'shelf' },
@@ -241,6 +244,19 @@ export const LEVEL01: LevelDef = {
       inspectText: 'The heat is unbearable. Nothing gets past that fire.',
     },
     { id: 'workbench1', x: 28.2, z: 0.2, prompt: 'Search the workbench', kind: 'container', roomType: 'garage', containerType: 'workbench' },
+    {
+      id: 'megahitVideo', x: 4.4, z: 13.5, prompt: 'Read the video store marquee', kind: 'inspect', once: false,
+      inspectText: 'MEGAHIT VIDEO — NEW RELEASE: SINKING SHIP. The return slot is jammed with tapes. Every one of them is Sinking Ship.',
+    },
+    { id: 'ansMachine1', x: -4.8, z: 23, prompt: 'Play the answering machine', kind: 'inspect', once: false },
+    {
+      id: 'zelnaPoster', x: -9.5, z: 26.6, prompt: 'Look at the poster', kind: 'inspect', once: false,
+      inspectText: 'SAGA OF ZELNA: FLUTE OF AGES — "Coming Christmas 1998." The date is circled in marker. Twice.',
+    },
+    {
+      id: 'beastFlyer', x: -12, z: 16.2, prompt: 'Read the flyer on the fence', kind: 'inspect', once: false,
+      inspectText: 'POCKETBEASTS CRIMSON & TEAL — COLLECT THEM ALL! Stapled to the fence. Just past it, something has been collecting.',
+    },
     { id: 'saveLamp', x: 19.9, z: 1, prompt: 'Rest at the lighthouse lamp', kind: 'save', once: false },
   ],
 

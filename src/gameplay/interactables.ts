@@ -18,10 +18,12 @@ const LOOT: Record<string, LootRoll[]> = {
     { item: 'ammo9', min: 4, max: 8, chance: 0.6 },
     { item: 'ring', min: 1, max: 1, chance: 0.25 },
     { item: 'pocketWatch', min: 1, max: 1, chance: 0.2 },
+    { item: 'pocketPal', min: 1, max: 1, chance: 0.18 },
   ],
   'bedroom:dresser': [
     { item: 'pearlNecklace', min: 1, max: 1, chance: 0.22 },
     { item: 'rag', min: 1, max: 2, chance: 0.65 },
+    { item: 'beanBuddy', min: 1, max: 1, chance: 0.2 },
   ],
   'bedroom:closet': [
     { item: 'ammo9', min: 4, max: 6, chance: 0.45 },
@@ -39,11 +41,14 @@ const LOOT: Record<string, LootRoll[]> = {
   'living:shelf': [
     { item: 'bottle', min: 1, max: 1, chance: 0.4 },
     { item: 'silverware', min: 1, max: 1, chance: 0.3 },
-    { item: 'pocketWatch', min: 1, max: 1, chance: 0.15 },
+    { item: 'vhsSinkingShip', min: 1, max: 1, chance: 0.3 },
+    { item: 'cdHeartGoes', min: 1, max: 1, chance: 0.25 },
+    { item: 'durpy', min: 1, max: 1, chance: 0.15 },
   ],
   'street:trash': [
     { item: 'bottle', min: 1, max: 2, chance: 0.55 },
     { item: 'rag', min: 1, max: 1, chance: 0.4 },
+    { item: 'pager', min: 1, max: 1, chance: 0.15 },
   ],
   'garage:workbench': [
     { item: 'sprayCan', min: 1, max: 1, chance: 0.5 },
