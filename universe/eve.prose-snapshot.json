@@ -1,4 +1,1022 @@
 {
-  "nodes": [],
-  "edges": []
+  "nodes": [
+    {
+      "id": "the-colony-line",
+      "name": "The Colony Line",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The freight railway along the Quiet Isle's west shore (design ref: Old Colony & Newport Railway). Kat rides it in and bails at 8:00 PM sharp; the train does not stop."
+      }
+    },
+    {
+      "id": "billy-island",
+      "name": "Billy Island",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Harbor island with the Harbor Light — the lighthouse save nearest the slice (design ref: Goat Island). The Lodge on it is the Erasure checkpoint civilians were told was a shelter."
+      }
+    },
+    {
+      "id": "the-wharfs",
+      "name": "The Wharfs",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Harbor district. Boats leave for the Island all night and come back empty. Mo's Clam Shack (EST. 1931; the fryer is still warm), the Lobster Co-op (a Trashclaw nest, of course), Two Scoops (FATHER'S DAY SUNDAE — DADS EAT FREE), Colony Tea & Coffee at war with the new MoonDollars."
+      }
+    },
+    {
+      "id": "katie-kat-weiss",
+      "name": "Katie 'Kat' Weiss",
+      "nodeType": "character",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Protagonist. Escapee of the original outbreak zone; rode the Colony Line freight into Kingsport at exactly 8:00 PM and found the city going the same way. Trying to reach Providence by dawn."
+      }
+    },
+    {
+      "id": "sting-gull",
+      "name": "Sting Gull",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Seagull + jellyfish bell. Drifts over fences trailing tendrils — a slow floating hazard that periodically swells, glows, and dips. Fragile; pops."
+      }
+    },
+    {
+      "id": "gutter-serpent",
+      "name": "Gutter Serpent",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "House cat head + centipede body. Slinks in a weave; segments regrow — only killing the cat head ends it. Hiss telegraph with flattening ears."
+      }
+    },
+    {
+      "id": "ottertail-light",
+      "name": "Ottertail Light",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Lighthouse save at Jacobstown's southern tip (design ref: Beavertail)."
+      }
+    },
+    {
+      "id": "the-providence-belle",
+      "name": "The Providence Belle",
+      "nodeType": "artifact",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "A 1928 motor yacht at the Wharfs (design ref: the classic harbor-tour yacht). The only way up the Bay to Providence once the Bell Bridge fails. Fueling and crewing her is the late-game arc. Her name was always a wink."
+      }
+    },
+    {
+      "id": "routing-is-the-puzzle",
+      "name": "Routing Is the Puzzle",
+      "nodeType": "rule",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Light puzzles, no fetch quests, no arbitrary combination locks. Blockers are diegetic (fire, collapse, a pack too big) and exploration is rewarded with the way around. Surviving the journey is the game."
+      }
+    },
+    {
+      "id": "low-country-light",
+      "name": "Low Country Light",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Lighthouse save (design ref: Dutch Island)."
+      }
+    },
+    {
+      "id": "thorn-island-light",
+      "name": "Thorn Island Light",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Lighthouse save (design ref: Rose Island)."
+      }
+    },
+    {
+      "id": "quillspray",
+      "name": "Quillspray",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Skunk + porcupine. Rears up (belly exposed — the window) before a frontal gas-and-quill volley."
+      }
+    },
+    {
+      "id": "the-driftwood-library",
+      "name": "The Driftwood Library",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The old subscription library (design ref: Redwood Library). Public-internet terminal with a PRINTED DIRECTORY OF WEBSITES; a librarian survivor who files everything, including what happened."
+      }
+    },
+    {
+      "id": "6-47",
+      "name": "6:47",
+      "nodeType": "event",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Every stopped pocket watch in the city reads 6:47. They all stopped at 6:47. Which day, and why, is never stated."
+      }
+    },
+    {
+      "id": "the-night-june-21-1998",
+      "name": "The Night (June 21, 1998)",
+      "nodeType": "event",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Summer Solstice, Father's Day, a Sunday. Kat arrives by train at exactly 8:00 PM; sunset 8:23; sunrise — the deadline — 5:11 AM. The clock runs in real time and the City Hall bell counts every hour while the world holds still: WHAT A HORRIBLE NIGHT TO HAVE A CURSE."
+      }
+    },
+    {
+      "id": "the-drive",
+      "name": "The Drive",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Ten miles of open coast road (design ref: Ocean Drive). The bicycle showcase: pack chases, wind, dead cars with trunk tools. Ends at the Point Light."
+      }
+    },
+    {
+      "id": "no-exposition-dumps",
+      "name": "No Exposition Dumps",
+      "nodeType": "rule",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Everyone already knows what the Experiment was, so nobody explains it. Kat knows and never says. Lore arrives via item descriptions, graffiti, placards, deleted files, and offhand clues only."
+      }
+    },
+    {
+      "id": "the-world-is-at-war-with-itself",
+      "name": "The World Is at War With Itself",
+      "nodeType": "rule",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "STALKER-style A-Life scaled down: species wander, hunt in packs, fight rival factions to death or morale break, eat their kills and grow; nests restock the streets; Erasure fights everything. The player is one more participant, and letting factions bleed each other first is always a valid plan."
+      }
+    },
+    {
+      "id": "dart-squirrel",
+      "name": "Dart Squirrel",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Gray squirrel + paper wasp. Tiny, fast, erratic; hovers with blurring wings then darts straight through you. Comes in tree-nest swarms; burn the nest or thin the pack."
+      }
+    },
+    {
+      "id": "father-s-day-is-the-through-line",
+      "name": "Father's Day Is the Through-Line",
+      "nodeType": "rule",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "June 21, 1998 was Father's Day, and the whole night refracts fatherhood: Providence means paternal care; Kat's unsigned card; the Observer as watchful father; SOAK and REN; nests as monstrous parenthood; troopers who are somebody's dads; cold grills plated for cookouts nobody ate. Never stated. Only accumulated."
+      }
+    },
+    {
+      "id": "ray",
+      "name": "Ray",
+      "nodeType": "character",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Tow driver at North-End Salvage. Took the flatbed to the Bell Bridge approach on June 21 and did not bring it back. A construction-paper Father's Day card with two crayon hands is still waiting on his workbench."
+      }
+    },
+    {
+      "id": "jacobstown",
+      "name": "Jacobstown",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The island across the Bell Bridge (design ref: Jamestown/Conanicut; James → Jacob, same root)."
+      }
+    },
+    {
+      "id": "kingsport",
+      "name": "Kingsport",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The City by the Sea (design ref: Newport, RI — in-game names are all nods/winks; the city takes its name from the local author's own invented coastal town; his epitaph reads I AM PROVIDENCE). Act One of the campaign."
+      }
+    },
+    {
+      "id": "apertureos-98",
+      "name": "ApertureOS 98",
+      "nodeType": "artifact",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The fictitious 1998 operating system (a clear allusion to a certain window-themed OS) running on every save-point computer. Teal desktop, Commence button, SAVE.EXE, PERKS.EXE, MY DOCUMENTS, TRASH with UNDELETE — the juicy lore is always in the trash. SOLITAIRE.EXE is missing HEARTS.DLL. Everything is missing its hearts lately."
+      }
+    },
+    {
+      "id": "ren",
+      "name": "REN",
+      "nodeType": "character",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Graffiti artist, son of SOAK. Crosses out his father's pieces; answers in red. 'the island was FIRST.' The tag war is a family argument conducted across a dead city."
+      }
+    },
+    {
+      "id": "steeple-bat",
+      "name": "Steeple Bat",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Bat + moray eel head. Roosts under the Bell Bridge and on fire escapes. Sonar-chirp telegraph (maw glows) then a dive; wound it mid-dive and it crash-lands into a helpless crawl."
+      }
+    },
+    {
+      "id": "nostalgia-bait-trademark-scrubbed",
+      "name": "Nostalgia Bait, Trademark-Scrubbed",
+      "nodeType": "rule",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "1998 saturates everything but no real trademark is ever named: Sinking Ship, Finestein, Durpy, MEGAHIT VIDEO, AmeriGate Online, FreeNaught, Saga of Zelna, PocketBeasts, Bean Buddies, Pocket Pals, Mega 64, MoonDollars, Doorway 2000. Comedy is dark but ludicrous — Maniac Mansion tone."
+      }
+    },
+    {
+      "id": "stella-maris-college",
+      "name": "Stella Maris College",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The college in the mansions (design ref: Salve Regina — one Marian hymn swapped for another). Dorms in gilded guest wings; summer session meant somebody was home."
+      }
+    },
+    {
+      "id": "trashclaw",
+      "name": "Trashclaw",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Raccoon + lobster. Armored frontally (flat 1 damage) until its claw slam whiffs — dodge the slam and it overbalances, exposing the soft ringed tail."
+      }
+    },
+    {
+      "id": "providence",
+      "name": "Providence",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The destination. A place friendly NPCs allude to as safe from the Experiment. The city up the Bay, the word for paternal care, and the epitaph — never disambiguated. Kat must reach it by dawn (5:11 AM)."
+      }
+    },
+    {
+      "id": "the-unsigned-father-s-day-card",
+      "name": "The Unsigned Father's Day Card",
+      "nodeType": "artifact",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Kat has carried it for three weeks. It isn't sealed. She hasn't signed it. Not for sale — the one bauble the pawnbroker will never be offered. Why she's really going to Providence, in card form. What she does with it at Providence is the endgame beat."
+      }
+    },
+    {
+      "id": "peach-beach-light",
+      "name": "Peach Beach Light",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Lighthouse save in the Bay (design ref: Plum Beach)."
+      }
+    },
+    {
+      "id": "the-point-light",
+      "name": "The Point Light",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Lighthouse save at the end of the Drive, by the Inn on the Point (design ref: Castle Hill). Sunset chairs still aimed at the view; the guest book stops mid-signature."
+      }
+    },
+    {
+      "id": "the-cliff-walk",
+      "name": "The Cliff Walk",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "3.5 miles of coastal path between the Summer Houses and open sea. Fog, Sting Gulls over the rail, Shellbacks on the rocks. Fixed cameras were invented for this."
+      }
+    },
+    {
+      "id": "the-quiet-isle",
+      "name": "The Quiet Isle",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The island holding Kingsport, Midway, and Northgate (design ref: Aquidneck — 'isle of peace'). Three towns, three acts, heading north to the bridges and up the Bay."
+      }
+    },
+    {
+      "id": "scythe-mare",
+      "name": "Scythe Mare",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Carriage horse + mantis forearms. Rears with arms unfolded and wing-cases popping open (the weak point) before either a full charge or a 180-degree scythe sweep."
+      }
+    },
+    {
+      "id": "the-chimera-ecology",
+      "name": "The Chimera Ecology",
+      "nodeType": "faction",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Every monster is a chimera — two everyday animals fused; the grafted anatomy carries the attack telegraph. Species behave as rival factions: they free-wander, hunt in packs, fight each other to the death or morale break, eat what they kill, and GROW (juvenile → adult → giant). Nests spawn juveniles. Monstrous parenthood is the design key."
+      }
+    },
+    {
+      "id": "1998-technology-only",
+      "name": "1998 Technology Only",
+      "nodeType": "rule",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Landlines, pagers, fax lines, caller-ID boxes, dial-up that dies when the phone is picked up, VHS, paper maps from gas stations, floppy disks, Y2K preppers eighteen months early. Nothing newer exists."
+      }
+    },
+    {
+      "id": "drain-coil",
+      "name": "Drain Coil",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Garter snake + lamprey mouth. Buried at sewer grates; erupts, latches, and drains — hit the exposed mouth-ring to break the latch, then punish the writhe."
+      }
+    },
+    {
+      "id": "bulwark-moose",
+      "name": "Bulwark Moose",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Bull moose + snapping-turtle shell plating. Siege engine: frontal armor (flat 1), hoof-scrape telegraph, a 12-meter charge that SMASHES fort walls and changes the map — and ends with its antlers stuck. The stuck window is the fight."
+      }
+    },
+    {
+      "id": "the-bell-bridge",
+      "name": "The Bell Bridge",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The great suspension bridge over the Bay (design ref: Pell Bridge — one letter, and this game chimes the hours). Its approach is blocked by a jackknifed, burning semi in the slice; its eventual failure forces the Providence Belle arc."
+      }
+    },
+    {
+      "id": "placeless-wink-named",
+      "name": "Placeless, Wink-Named",
+      "nodeType": "rule",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Never the real state or country; no real place or business names. Every name is a nod with the influence visible (see the gazetteer). Providence stays — that IS the wink."
+      }
+    },
+    {
+      "id": "soak",
+      "name": "SOAK",
+      "nodeType": "character",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Graffiti artist, one half of the dueling-tag war across Kingsport. Father of REN. His stencil diagrams double as weapon blueprints (the flamethrower). Argues municipal history in paint: 'THEY TAKE THEM TO THE ISLAND.'"
+      }
+    },
+    {
+      "id": "the-collapse",
+      "name": "The Collapse",
+      "nodeType": "event",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The civil breakdown in the Experiment's wake. Society didn't fall to the monsters; it fell apart arguing about what had been done to it. Protests, cover-ups, forts of unclear authorship, tag wars, looted pawnshops."
+      }
+    },
+    {
+      "id": "the-north-end",
+      "name": "The North End",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Kingsport's neighborhood by the Colony Line rails — the vertical slice. Tracks, row streets, a searchable house, the CCTV cross street, the frog street, the burning-semi blockade under the bridge approach, chain-link corridors, and the salvage garage with the lighthouse lamp."
+      }
+    },
+    {
+      "id": "m",
+      "name": "M.",
+      "nodeType": "character",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Co-owner of North-End Salvage. Left notes for Ray: keep the bay lamp lit — 'people walk toward light, that's all we can do now.' Deleted from the office computer: 'The boys made you something. It is on your bench. Come home and get it.'"
+      }
+    },
+    {
+      "id": "midway",
+      "name": "Midway",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The middle town (design ref: Middletown). Act Two."
+      }
+    },
+    {
+      "id": "bloat-sow",
+      "name": "Bloat Sow",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Pig + engorged tick abdomen. Feeds on corpses and visibly swells. Explodes on death — killing it NEXT TO its friends is the tactic the game never explains."
+      }
+    },
+    {
+      "id": "the-swells",
+      "name": "The Swells",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The grandest of the Summer Houses on Beauview Avenue (design ref: The Breakers — the waves, and the people who owned it). The bauble economy's endgame; Erasure evacuated the Avenue FIRST, and the placards downtown noticed."
+      }
+    },
+    {
+      "id": "cobble-crab",
+      "name": "Cobble Crab",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Green crab + barnacle-rubble armor. Camouflages as barricade debris (forts tie-in); unfolds with hinging plates and popping eyestalks. Sometimes flips itself — the underside is everything."
+      }
+    },
+    {
+      "id": "the-observer",
+      "name": "The Observer",
+      "nodeType": "character",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Unknown watcher on the other side of the CCTV lenses. Proves their existence by intervening: electric locks buzz open a beat before an ambush, lights snap on over the safe path, payphones ring as Kat passes."
+      }
+    },
+    {
+      "id": "the-out-island",
+      "name": "The Out Island",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The day-trip island people swear the Experiment never reached (design ref: Block Island). A ferry schedule with every departure crossed out but one. Sequel bait."
+      }
+    },
+    {
+      "id": "the-experiment",
+      "name": "The Experiment",
+      "nodeType": "event",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The thing that went wrong. Everyone in-world knows what it was, so no one explains it — not Kat, not the NPCs, not the signage. It arrives only in fragments: 'since the Experiment,' 'we are not your control group,' 'our kids drank it too.'"
+      }
+    },
+    {
+      "id": "frog-chimera",
+      "name": "Frog Chimera",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Bloated frog + insectoid bulb-tipped tongue (the tongue is like a certain plumber-adjacent dinosaur's). Body shots deal a flat 1. The bulb — targetable only while the tongue is extended — takes massive damage; time the battle pause to the tongue. Telegraph: it inflates and its jaw drops."
+      }
+    },
+    {
+      "id": "the-blue-dress",
+      "name": "The Blue Dress",
+      "nodeType": "artifact",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Found hanging in the first closet she searches. 'I don't think it's my size... and what is that STAIN?!' Navy blue. Dry-clean only. It has been through something historic. The pawnbroker pays double and asks nothing."
+      }
+    },
+    {
+      "id": "stilt-stag",
+      "name": "Stilt Stag",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Deer + heron. A tall fog-walker on stilt legs; rears its head high, then the beak plunges to street level and sticks — punish the stuck head; kneecapping it brings everything lower."
+      }
+    },
+    {
+      "id": "the-keeper-s-rock",
+      "name": "The Keeper's Rock",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Harbor lighthouse save (design ref: Ida Lewis / Lime Rock — named for the heroine keeper)."
+      }
+    },
+    {
+      "id": "the-pawnbroker",
+      "name": "The Pawnbroker",
+      "nodeType": "character",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "North End pawnshop owner. Trades equipment only for baubles — pocket watches, pearls, rings, silverware. Pays in bullets and doesn't meet your eyes. Pays double for the Blue Dress and asks nothing. Shop signs: 'CLOSED SUNDAYS' and 'BACK IN 5' — both lying differently."
+      }
+    },
+    {
+      "id": "hive-bear",
+      "name": "Hive Bear",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Black bear + paper-wasp hive grown through the torso. Boss. Body shots ANGER the hive (wasp clouds sting you for trying); the roar splits its chest open — the hive core is the only sane target. It is protecting its children."
+      }
+    },
+    {
+      "id": "crow-spider",
+      "name": "Crow-Spider",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Spider + fluttering crow wings. THE WING-FLUTTER IS THE TELEGRAPH: wings rise and beat, then a ballistic leap. Flaming variants crawl out of the burning semi. The giant one is not a species — it is one that ate well."
+      }
+    },
+    {
+      "id": "the-casino",
+      "name": "The Casino",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Historic grass-court club (design ref: the Newport Casino / Tennis Hall of Fame). Floodlit courts, HALL OF FAME OPEN banners for a July that won't come; 13 courts, 13 camera zones."
+      }
+    },
+    {
+      "id": "first-beach",
+      "name": "First Beach",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The family beach (design ref: Easton's). Snack bar, arcade with a Mega 64 demo kiosk, Shellbacks owning the sand, a carousel that runs all night on its own."
+      }
+    },
+    {
+      "id": "shellback",
+      "name": "Shellback",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Harbor seal + snapping turtle. A living roadblock: retracts fully invulnerable, then the neck lunges out on a horrible stretch — the neck is the weak point, mid-lunge only."
+      }
+    },
+    {
+      "id": "hotel-norseman",
+      "name": "Hotel Norseman",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Gilded Age hotel (design ref: Hotel Viking, 1926). Rooftop view of half the map; room keys are ACTUAL metal keys — floor-by-floor gating with zero padlock puzzles."
+      }
+    },
+    {
+      "id": "tentacled-doberman",
+      "name": "Tentacled Doberman",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Doberman + squid tentacles rooted along the spine. Fast pack rusher; tentacles coil (glowing) before the lash — shoot the coil to stagger it. Setpiece packs slam the chain-link fences they can never cross."
+      }
+    },
+    {
+      "id": "lure-heron",
+      "name": "Lure Heron",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Great blue heron + anglerfish esca. Dangles a glowing lure that MIMICS an item sparkle — the game's fake pickups. Shooting the lure itself is the crit; enough lure damage dims it forever and slows the snap."
+      }
+    },
+    {
+      "id": "the-island-the-old-asylum",
+      "name": "The Island (the old Asylum)",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Design ref: Coasters Harbor Island. Built 1819 as the city asylum and poor farm — where the city sent the people it couldn't explain. Sold to the government in 1880; war was taught in it after 1884. Now Erasure runs the Experiment's cleanup from it. Boats leave full and come back empty. For 180 years this island is where the city sends what it can't explain — and it's had practice. Nobody says this aloud."
+      }
+    },
+    {
+      "id": "rat-gull",
+      "name": "Rat-Gull",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Plump rat + stubby gull wings. Skittish scavenger of the rail yards; flees people, eats street rats, grows. Wing-flare telegraph, hopping lunge, periodic glowing eye."
+      }
+    },
+    {
+      "id": "megahit-video",
+      "name": "MEGAHIT VIDEO",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The video store (design ref: Blockbuster). NEW RELEASE: SINKING SHIP. The return slot is jammed with tapes; every one of them is Sinking Ship. BE KIND — REWIND. Nobody was kind."
+      }
+    },
+    {
+      "id": "the-erasure-team",
+      "name": "The Erasure Team",
+      "nodeType": "faction",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Hazmat-suited cleanup squads burying the outbreak. Shoot on sight. Run the operation from the Island. Not chimeras — that is the point. Often caught off guard: coffee at a barrel, peeing off the bridge approach. Somebody's dads: kill one and a kid's crayon drawing falls out of his helmet."
+      }
+    },
+    {
+      "id": "the-june-20th-march",
+      "name": "The June 20th March",
+      "nodeType": "event",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "CITY HALL TO THE PIER. BRING EVERYONE. IT IS OUR WATER TOO. The night before the game, whole swaths of marchers simply dropped where they stood — placards still in hand, no bullet wounds. Kat: 'I don't see any bullet wounds.' Their signs tell the rest."
+      }
+    },
+    {
+      "id": "hush-fox",
+      "name": "Hush Fox",
+      "nodeType": "creature",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "Red fox + great horned owl. Dead silent, hunts camera blind spots — but shows plainly on CCTV zones (the Observer's lenses). The only warning is the eye-glint."
+      }
+    },
+    {
+      "id": "fort-addams",
+      "name": "Fort Addams",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The old harbor fort and festival grounds (design ref: Fort Adams; one added letter — the family would approve). An abandoned stage reads JUNE 20 BENEFIT — CANCELLED. Survivor stronghold vs. a wall-breaching Bulwark Moose; festival rigging is salvage heaven."
+      }
+    },
+    {
+      "id": "northgate",
+      "name": "Northgate",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "The north town, the way off the island (design ref: Portsmouth). Act Three."
+      }
+    },
+    {
+      "id": "north-end-salvage",
+      "name": "North-End Salvage",
+      "nodeType": "place",
+      "status": "canon",
+      "edgeCount": 0,
+      "properties": {
+        "description": "M. and Ray's garage on the truck route. Chain-link yard corridors behind it; inside, a salvaged lighthouse lamp sweeping the bay doors and an ApertureOS 98 machine that still has power. The slice's save point — and Ray's unclaimed Father's Day card."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "katie-kat-weiss",
+      "target": "the-observer",
+      "relationType": "watched-by",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "katie-kat-weiss",
+      "target": "the-unsigned-father-s-day-card",
+      "relationType": "carries",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "katie-kat-weiss",
+      "target": "providence",
+      "relationType": "seeks",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "the-unsigned-father-s-day-card",
+      "target": "katie-kat-weiss",
+      "relationType": "carried-by",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "the-observer",
+      "target": "katie-kat-weiss",
+      "relationType": "watches",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "sting-gull",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "gutter-serpent",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "quillspray",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "dart-squirrel",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "ray",
+      "target": "m",
+      "relationType": "partner-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "m",
+      "target": "ray",
+      "relationType": "partner-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "kingsport",
+      "target": "the-quiet-isle",
+      "relationType": "part-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "the-north-end",
+      "target": "kingsport",
+      "relationType": "part-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "ren",
+      "target": "soak",
+      "relationType": "son-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "ren",
+      "target": "soak",
+      "relationType": "rivals",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "soak",
+      "target": "ren",
+      "relationType": "father-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "soak",
+      "target": "ren",
+      "relationType": "rivals",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "steeple-bat",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "trashclaw",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "midway",
+      "target": "the-quiet-isle",
+      "relationType": "part-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "northgate",
+      "target": "the-quiet-isle",
+      "relationType": "part-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "scythe-mare",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "drain-coil",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "bulwark-moose",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "bloat-sow",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "cobble-crab",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "frog-chimera",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "stilt-stag",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "hive-bear",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "crow-spider",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "shellback",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "tentacled-doberman",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "lure-heron",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "rat-gull",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "hush-fox",
+      "target": "the-chimera-ecology",
+      "relationType": "member-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "north-end-salvage",
+      "target": "the-north-end",
+      "relationType": "part-of",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "hush-fox",
+      "target": "the-observer",
+      "relationType": "revealed-by",
+      "sentiment": "neutral",
+      "weight": 1
+    },
+    {
+      "source": "the-island-the-old-asylum",
+      "target": "the-erasure-team",
+      "relationType": "headquarters-of",
+      "sentiment": "neutral",
+      "weight": 1
+    }
+  ]
 }

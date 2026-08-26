@@ -85,7 +85,10 @@ switch (cmd) {
   }
   case 'pull': {
     try {
-      const res = await fetch(`${HUB}/api/universes/EVE/snapshot`);
+      // scope=all: default scope omits generic-Edges-table universes' nodes.
+      // Note: per-node edgeCount is unreliable (pre-existing Hub bug); the
+      // top-level edges array is correct — consume that.
+      const res = await fetch(`${HUB}/api/universes/EVE/snapshot?scope=all`);
       if (!res.ok) fail(`Hub answered ${res.status} — has /eve run in the Prose CLI yet?`);
       const snap = await res.json();
       const out = join(here, '..', 'universe', 'eve.prose-snapshot.json');
