@@ -13,6 +13,10 @@ import { rollLoot, type Interactable } from './gameplay/interactables';
 import { ITEMS } from './gameplay/inventory';
 import { BattleSystem } from './battle/battle';
 import { FrogChimera } from './enemies/frogBoss';
+import { CrowSpider } from './enemies/spider';
+import { StatMenu } from './ui/statMenu';
+import { saveGame } from './gameplay/saveSystem';
+import type { Collider } from './physics/colliders';
 import { Hud } from './ui/hud';
 import { Subtitles } from './ui/subtitles';
 import { InventoryMenu } from './ui/inventoryMenu';
@@ -80,6 +84,7 @@ const hud = new Hud(hudEl);
 const subtitles = new Subtitles(hudEl);
 const invMenu = new InventoryMenu(hudEl);
 invMenu.onMessage = (t) => hud.message(t);
+const statMenu = new StatMenu(hudEl);
 const battle = new BattleSystem(state, scene, hudEl, canvas);
 battle.onMessage = (t) => hud.message(t);
 
@@ -140,6 +145,10 @@ function handleInteract(i: Interactable): void {
     }
     case 'pickup': {
       for (const g of i.grants ?? []) inventory.add(g.item, g.n);
+      if (i.grantsBlueprint) {
+        inventory.blueprints.add(i.grantsBlueprint);
+        subtitles.say('...I could actually build that.');
+      }
       hud.message(i.inspectText ?? 'Taken.');
       i.used = true;
       break;
@@ -162,13 +171,17 @@ function handleInteract(i: Interactable): void {
       break;
     }
     case 'save': {
-      state.hp = state.maxHp;
-      hud.message('The lamp sweeps its beam. (Save & skills arrive with M14.)');
-      subtitles.say('A lighthouse lamp, in a garage. Someone dragged this here.');
+      if (!state.flags['lampSeen']) {
+        state.flags['lampSeen'] = true;
+        subtitles.say('A lighthouse lamp, in a garage. Someone dragged this here.');
+      }
+      statMenu.toggle();
       break;
     }
   }
 }
+
+let currentEncounter: 'none' | 'frog' | 'swarm' | 'giant' = 'none';
 
 function fireTrigger(id: string): void {
   switch (id) {
@@ -178,27 +191,84 @@ function fireTrigger(id: string): void {
     case 'frogStreet': {
       const frog = new FrogChimera();
       frog.object.position.set(0, 0, -9.5);
+      currentEncounter = 'frog';
       battle.start([frog]);
       subtitles.say('...That used to be a frog.');
       break;
     }
+    case 'blockadeSwarm': {
+      const pack: CrowSpider[] = [];
+      for (const [sx, sz] of [[-1, -22.8], [2, -22.5], [-4, -23.5]] as const) {
+        const s = new CrowSpider({ flaming: true });
+        s.object.position.set(sx, 0, sz);
+        pack.push(s);
+      }
+      currentEncounter = 'swarm';
+      battle.start(pack);
+      subtitles.say('They\'re coming out of the fire—');
+      break;
+    }
+    case 'sliceEnd': {
+      state.flags['sliceComplete'] = true;
+      subtitles.say('Providence. Right.');
+      hud.message('SLICE COMPLETE — the route continues toward the bridge.');
+      break;
+    }
   }
+}
+
+battle.onVictory = () => {
+  if (currentEncounter === 'frog') {
+    state.flags['frogDead'] = true;
+  } else if (currentEncounter === 'swarm') {
+    window.setTimeout(() => {
+      const giant = new CrowSpider({ giant: true, flaming: true });
+      giant.object.position.set(-6, 0, -22.5);
+      currentEncounter = 'giant';
+      battle.start([giant]);
+      subtitles.say('...That one ate well.');
+    }, 1800);
+  } else if (currentEncounter === 'giant') {
+    state.flags['giantSpiderDead'] = true;
+  }
+};
+
+statMenu.onSave = () => {
+  state.hp = state.maxHp;
+  state.flags['garageSaved'] = true;
+  state.flags['fireOut'] = true;
+  saveGame(state, inventory, player.position.x, player.position.z);
+  hud.message('Saved. Outside, something changes in the light.');
+  subtitles.say('The fire\'s dying down. Lucky. ...Lucky?');
+};
+
+function activeColliders(): readonly Collider[] {
+  let cols = level.colliders;
+  for (const g of level.gated) {
+    if (!state.flags[g.flag]) cols = cols.concat(g.collider);
+  }
+  return cols;
 }
 
 // Dev console handle (also used by automated drive tests).
 (window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player };
 
 function frame(): void {
-  gameClock.timeScale = battle.wantsPause || invMenu.open ? 0 : 1;
+  const menuOpen = invMenu.open || statMenu.open;
+  gameClock.timeScale = battle.wantsPause || menuOpen ? 0 : 1;
   const { realDt, gameDt } = gameClock.tick();
   const sample = input.sample();
+  const colliders = activeColliders();
 
   cameraMgr.update(player.position.x, player.position.z, realDt);
   pipeline.setDistortion(cameraMgr.activeZone?.fisheye ?? 0);
   const moveDir = latch.update(sample, cameraMgr.activeZone);
 
-  // Inventory menu (pauses the world).
-  if (invMenu.open) {
+  // Menus (pause the world).
+  if (statMenu.open) {
+    statMenu.update(sample, state);
+    latch.reset();
+  } else if (invMenu.open) {
     invMenu.update(sample, inventory, state);
     latch.reset();
   } else if (sample.menuJust && !battle.wantsPause) {
@@ -206,12 +276,12 @@ function frame(): void {
   }
 
   if (battle.active) {
-    player.locked = !battle.playerControlled || invMenu.open;
-    if (battle.playerControlled && !invMenu.open && sample.dodgeJust) player.dodge(moveDir);
-    battle.update(realDt, gameDt, sample, player, cameraMgr.camera, level.colliders);
+    player.locked = !battle.playerControlled || menuOpen;
+    if (battle.playerControlled && !menuOpen && sample.dodgeJust) player.dodge(moveDir);
+    battle.update(realDt, gameDt, sample, player, cameraMgr.camera, colliders);
   } else {
-    player.locked = invMenu.open;
-    if (!invMenu.open && sample.dodgeJust) player.dodge(moveDir);
+    player.locked = menuOpen;
+    if (!menuOpen && sample.dodgeJust) player.dodge(moveDir);
     for (const t of level.triggers) {
       if (!t.fired && triggerContains(t, player.position.x, player.position.z)) {
         t.fired = true;
@@ -220,12 +290,12 @@ function frame(): void {
     }
     state.regen(gameDt);
   }
-  player.update(gameDt, moveDir, sample.magnitude, level.colliders);
+  player.update(gameDt, moveDir, sample.magnitude, colliders);
   rig.pose = battle.phase === 'fire' ? 'aim' : 'explore';
   rig.update(gameDt, moveDir && !player.locked ? sample.magnitude : 0);
 
   // Interact.
-  const near = !battle.active && !invMenu.open ? nearestInteractable() : null;
+  const near = !battle.active && !menuOpen ? nearestInteractable() : null;
   if (near) {
     promptEl.textContent = `${sample.padConnected ? 'X' : 'E'}: ${near.prompt}`;
     promptEl.style.display = 'block';
@@ -236,10 +306,18 @@ function frame(): void {
 
   // Ambience animation.
   const t = performance.now() / 1000;
-  fireLight.intensity = 2.2 + Math.sin(t * 13) * 0.5 + Math.sin(t * 29) * 0.3;
-  fireGroup.children.forEach((c, idx) => {
-    if ((c as THREE.Mesh).isMesh) c.scale.y = 1 + Math.sin(t * 11 + idx * 2.1) * 0.18;
-  });
+  if (state.flags['fireOut'] && fireGroup.visible) {
+    fireGroup.visible = false;
+    fireLight.intensity = 0;
+    const heat = level.interactables.find((i) => i.id === 'truckHeat');
+    if (heat) heat.used = true;
+  }
+  if (fireGroup.visible) {
+    fireLight.intensity = 2.2 + Math.sin(t * 13) * 0.5 + Math.sin(t * 29) * 0.3;
+    fireGroup.children.forEach((c, idx) => {
+      if ((c as THREE.Mesh).isMesh) c.scale.y = 1 + Math.sin(t * 11 + idx * 2.1) * 0.18;
+    });
+  }
   lampLight.intensity = 1.1 + Math.sin(t * 2.4) * 0.5;
   lamp.rotation.y = t * 1.8;
 

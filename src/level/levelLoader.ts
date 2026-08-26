@@ -13,6 +13,8 @@ export interface LoadedLevel {
   root: THREE.Group;
   zones: CameraZone[];
   colliders: Collider[];
+  /** Colliders active only while their flag is false (e.g. fire blockade). */
+  gated: { flag: string; collider: Collider }[];
   interactables: Interactable[];
   triggers: (TriggerDef & { fired: boolean })[];
 }
@@ -50,8 +52,11 @@ export function loadLevel(def: LevelDef): LoadedLevel {
     );
   }
 
+  const gated: LoadedLevel['gated'] = [];
   for (const w of def.walls) {
-    colliders.push(segment(w.a[0], w.a[1], w.b[0], w.b[1]));
+    const col = segment(w.a[0], w.a[1], w.b[0], w.b[1]);
+    if (w.gated) gated.push({ flag: w.gated, collider: col });
+    else colliders.push(col);
     if (w.invisible) continue;
     const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
     const h = w.h ?? 2.7;
@@ -134,6 +139,7 @@ export function loadLevel(def: LevelDef): LoadedLevel {
     root,
     zones: def.zones.map((z) => new CameraZone(z)),
     colliders,
+    gated,
     interactables: def.interactables.map(makeInteractable),
     triggers: def.triggers.map((t) => ({ ...t, fired: false })),
   };

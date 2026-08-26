@@ -10,6 +10,8 @@ export interface WallDef {
   tex?: WallTex;
   /** Collider-only (invisible boundary). */
   invisible?: boolean;
+  /** Collider exists only while this GameState flag is FALSE. */
+  gated?: string;
 }
 
 export interface BoxDef {

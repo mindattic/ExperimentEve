@@ -40,6 +40,7 @@ export class BattleSystem {
   private victoryTimer = 0;
   onMessage: ((text: string) => void) | null = null;
   onShot: (() => void) | null = null;
+  onVictory: (() => void) | null = null;
 
   private readonly dome: THREE.Mesh;
   private readonly targetMarker: THREE.Mesh;
@@ -149,6 +150,17 @@ export class BattleSystem {
 
     switch (this.phase) {
       case 'active': {
+        // Disengage: leaving the fight zone counts as an escape (until real
+        // arena-perimeter walls land with the encounter data).
+        let nearest = Infinity;
+        for (const e of this.enemiesAlive) {
+          nearest = Math.min(nearest, e.object.position.distanceTo(player.position));
+        }
+        if (nearest > 18) {
+          this.onMessage?.('She leaves them behind.');
+          this.end();
+          return;
+        }
         this.atb = Math.min(1, this.atb + this.state.atbRatePerSec * gameDt);
         if (this.atb >= 1 && input.confirmJust) {
           this.openMenu();
@@ -453,6 +465,7 @@ export class BattleSystem {
       this.victoryTimer = 1.4;
       this.state.unspentPoints += this.enemies.length;
       this.onMessage?.(`Clear. +${this.enemies.length} skill pt.`);
+      this.onVictory?.();
     }
   }
 

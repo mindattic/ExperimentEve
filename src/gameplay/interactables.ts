@@ -68,6 +68,8 @@ export interface InteractableDef {
   /** inspect: line shown; pickup: items granted. */
   inspectText?: string;
   grants?: { item: ItemId; n: number }[];
+  /** pickup: also teaches this recipe output (blueprint drip). */
+  grantsBlueprint?: ItemId;
   once?: boolean;
 }
 

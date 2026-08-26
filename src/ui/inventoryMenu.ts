@@ -46,7 +46,13 @@ export class InventoryMenu {
         else if (this.marked.length < 3) this.marked.push(def.id);
       } else if (this.index === items.length) {
         const recipe = inv.tryCombine(this.marked);
-        this.onMessage?.(recipe ? recipe.line : "Those don't combine.");
+        this.onMessage?.(
+          recipe === 'locked'
+            ? 'The parts fit together somehow... she needs to see it done first.'
+            : recipe
+              ? recipe.line
+              : "Those don't combine.",
+        );
         this.marked = [];
       } else {
         this.toggle();
@@ -82,6 +88,12 @@ export class InventoryMenu {
       );
     });
     if (items.length === 0) lines.push('<div style="color:#5a6166">&nbsp;&nbsp;(empty pockets)</div>');
+    const selected = this.index < items.length ? items[this.index]![0] : null;
+    if (selected) {
+      lines.push(
+        `<div style="margin-top:8px;max-width:320px;font-size:12px;font-style:italic;color:#7a8a94;white-space:normal">${selected.desc}</div>`,
+      );
+    }
     const selC = this.index === items.length;
     const selX = this.index === items.length + 1;
     lines.push(

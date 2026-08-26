@@ -62,7 +62,7 @@ export const LEVEL01: LevelDef = {
     },
     {
       id: 'blockade',
-      polygon: [[-14, -26], [6, -26], [6, -17], [-14, -17]],
+      polygon: [[-14, -30], [6, -30], [6, -17], [-14, -17]],
       cameraPosition: [-12.5, 4.5, -18.5],
       cameraLookAt: [-1, 1.2, -22],
       forward: [1, 0],
@@ -127,8 +127,12 @@ export const LEVEL01: LevelDef = {
 
     // Blockade perimeter.
     { a: [-14, -17], b: [-4, -17], tex: 'brick', h: 3 },
-    { a: [-14, -26], b: [-14, -17], tex: 'brick', h: 3 },
-    { a: [-14, -26], b: [6, -26], invisible: true }, // past-the-truck gate (fireOut later)
+    { a: [-14, -30], b: [-14, -17], tex: 'brick', h: 3 },
+    // Past-the-truck gate: collider only while the fire still burns.
+    { a: [-14, -26], b: [6, -26], invisible: true, gated: 'fireOut' },
+    // South strip (slice exit once the fire dies).
+    { a: [-14, -30], b: [6, -30], invisible: true },
+    { a: [6, -30], b: [6, -26], tex: 'brick', h: 3 },
 
     // Garage (brick shell), door gap x[23,26] on the south wall.
     { a: [18, -6], b: [23, -6], tex: 'brick', h: 3.4 },
@@ -207,6 +211,7 @@ export const LEVEL01: LevelDef = {
     { min: [-14, 0], max: [14, 6], tex: 'asphalt' },
     { min: [-4, -17], max: [4, 0], tex: 'asphalt' },
     { min: [-14, -26], max: [6, -17], tex: 'asphalt' },
+    { min: [-14, -30], max: [6, -26], tex: 'asphalt' },
     { min: [6, -21], max: [26, -18], tex: 'gravel' },
     { min: [23, -18], max: [26, -6], tex: 'gravel' },
     { min: [18, -6], max: [30, 2], tex: 'interior' },
@@ -227,8 +232,9 @@ export const LEVEL01: LevelDef = {
     },
     {
       id: 'graffiti1', x: -11, z: 0.7, prompt: 'Inspect the graffiti', kind: 'pickup',
-      inspectText: 'SOAK crossed out REN\'s piece — again. Someone left half-used cans and a lighter.',
+      inspectText: 'SOAK crossed out REN\'s piece with a STENCIL DIAGRAM: can + flame. Cans and a lighter left below.',
       grants: [{ item: 'sprayCan', n: 1 }, { item: 'lighter', n: 1 }],
+      grantsBlueprint: 'flamethrower',
     },
     {
       id: 'truckHeat', x: 1.5, z: -20.6, prompt: 'Get closer to the truck', kind: 'inspect', once: false,
@@ -241,5 +247,7 @@ export const LEVEL01: LevelDef = {
   triggers: [
     { id: 'introBark', polygon: [[-14, 30], [14, 30], [14, 40], [-14, 40]], once: true },
     { id: 'frogStreet', polygon: [[-4, -10], [4, -10], [4, -4], [-4, -4]], once: true },
+    { id: 'blockadeSwarm', polygon: [[-10, -25], [4, -25], [4, -18], [-10, -18]], once: true },
+    { id: 'sliceEnd', polygon: [[-14, -30], [6, -30], [6, -27], [-14, -27]], once: true },
   ],
 };
