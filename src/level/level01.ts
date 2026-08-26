@@ -279,14 +279,14 @@ export const LEVEL01: LevelDef = {
     {
       id: 'gunCabinet', x: -10.7, z: 24.6, prompt: 'A locked gun cabinet', kind: 'locked',
       lockDifficulty: 'easy',
-      inspectText: 'The cabinet opens. Boxed rounds, kept the way careful people keep them.',
-      grants: [{ item: 'ammo9', n: 12 }],
+      inspectText: 'The cabinet opens. Boxed rounds — and a competition longslide, kept the way careful people keep them.',
+      grants: [{ item: 'ammo9', n: 12 }, { item: 'gunLongslide', n: 1 }],
     },
     {
       id: 'strongbox', x: 27, z: -5.3, prompt: 'A strongbox, bolted to the floor', kind: 'locked',
       lockDifficulty: 'hard',
-      inspectText: 'The strongbox gives. Payroll baubles — and the shop\'s spare lighter.',
-      grants: [{ item: 'pocketWatch', n: 1 }, { item: 'ring', n: 1 }, { item: 'lighter', n: 1 }],
+      inspectText: 'The strongbox gives. Payroll baubles, the shop\'s spare lighter — and a syringe worth more than the payroll.',
+      grants: [{ item: 'pocketWatch', n: 1 }, { item: 'ring', n: 1 }, { item: 'lighter', n: 1 }, { item: 'injMitosis', n: 1 }],
     },
     { id: 'bathcab1', x: -10.4, z: 20.2, prompt: 'Search the medicine cabinet', kind: 'container', roomType: 'bathroom', containerType: 'cabinet' },
     { id: 'tub-house1', x: -8.7, z: 20.5, prompt: 'Draw a bath', kind: 'inspect', once: false },
@@ -388,6 +388,18 @@ export const LEVEL01: LevelDef = {
     },
     { id: 'car1', x: 0, z: 1.2, prompt: 'Salvage the dead sedan', kind: 'salvage', salvageType: 'car' },
     { id: 'car2', x: -1.6, z: -13.2, prompt: 'Salvage the dead wagon', kind: 'salvage', salvageType: 'car' },
+    // Chimeric injectors in the wild: an Erasure field kit dropped at the
+    // blockade, and road-crew hi-vis on the scaffolding.
+    {
+      id: 'injField1', x: 3.2, z: -18.4, prompt: 'An Erasure field kit, dropped', kind: 'pickup',
+      inspectText: 'A field syringe in a crushed case. COMBUSTION, in block letters. She knows the pharmacology. She wishes she didn\'t.',
+      grants: [{ item: 'injCombustion', n: 1 }],
+    },
+    {
+      id: 'vestPickup', x: 5.4, z: 21.2, prompt: 'Take the yellow vest', kind: 'pickup',
+      inspectText: 'Hi-vis, size L, abandoned mid-shift. The road crew stopped existing before the road did.',
+      grants: [{ item: 'yellowVest', n: 1 }],
+    },
     // Car doors: almost always "Locked." — except when they aren't, and then
     // it's either loot or teeth. Every check is a bet.
     { id: 'carDoor1', x: 1.2, z: 2.6, prompt: 'Check the car door', kind: 'carDoor', once: false },

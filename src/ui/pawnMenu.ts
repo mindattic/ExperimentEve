@@ -24,6 +24,8 @@ const BUY_LIST: { item: ItemId; cost: number }[] = [
   { item: 'medkit', cost: 10 },
   { item: 'fireAxe', cost: 15 },
   { item: 'alcohol', cost: 3 },
+  { item: 'gunSnub', cost: 25 },
+  { item: 'injMetabolic', cost: 18 }, // he kept the fridge running for this
 ];
 
 export class PawnMenu {

@@ -25,7 +25,9 @@ export class Hud {
       const row = document.createElement('div');
       row.style.cssText = 'margin-bottom:4px';
       const label = document.createElement('span');
-      label.textContent = key;
+      // The gauge is chimeric-DNA saturation, not "mana". Kat would object
+      // to the word mana. Clinically.
+      label.textContent = key === 'PE' ? 'DNA' : key;
       label.style.cssText = 'display:inline-block;width:44px;color:#b8c0c8';
       const track = document.createElement('div');
       track.style.cssText =

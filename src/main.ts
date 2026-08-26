@@ -237,6 +237,7 @@ const hud = new Hud(hudEl);
 const subtitles = new Subtitles(hudEl);
 const invMenu = new InventoryMenu(hudEl);
 invMenu.onMessage = (t) => hud.message(t);
+invMenu.onBark = (t) => subtitles.say(t);
 const statMenu = new StatMenu(hudEl);
 const pawnMenu = new PawnMenu(hudEl);
 const lockpick = new LockpickGame(hudEl);
@@ -781,6 +782,11 @@ function fireTrigger(id: string): void {
         sfx.alarmClang();
         hud.message('The side-gate lock buzzes open.');
         subtitles.say('...Nobody pressed anything.', 3);
+        // The Observer's second gift: taped to the gate, labeled for her.
+        inventory.add('injNeuroelectric');
+        window.setTimeout(() => {
+          hud.message('Taped to the gate: a syringe. NEUROELECTRIC, in grease pencil.');
+        }, 3200);
       }, 1600);
       break;
     }
@@ -973,8 +979,11 @@ function startNewGame(): void {
   introTimer = 3.4;
   train.visible = true;
   train.position.x = -46;
-  // What she carries off the train: one clip, and the reason she's going.
+  // What she carries off the train: one clip, the reason she's going,
+  // and the coat she left the ER in.
   inventory.add('katsCard');
+  inventory.add('labCoat');
+  state.equipped.torso = 'labCoat';
 }
 
 function continueGame(): void {
@@ -1123,6 +1132,9 @@ function frame(): void {
     if (executionMark && sample.confirmJust) {
       squad.execute(executionMark);
       executionMark = null;
+      // He won't need the sidearm.
+      inventory.add('gunErasure');
+      hud.message('Taken: Erasure Sidearm.');
     }
   }
   worldAI.update(gameDt, player.position, colliders, battle.active);

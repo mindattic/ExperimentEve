@@ -1,5 +1,6 @@
 import type { InputSample } from '../core/input';
-import { Inventory, ITEMS, type ItemId } from '../gameplay/inventory';
+import { Inventory, ITEMS, GUN_STATS, type ItemId } from '../gameplay/inventory';
+import { infusionForInjector } from '../gameplay/infusions';
 import type { GameState } from '../gameplay/gameState';
 
 // Pause-style inventory: mark 2-3 items, Combine crafts (RE-style);
@@ -10,6 +11,8 @@ export class InventoryMenu {
   private marked: ItemId[] = [];
   private readonly el: HTMLDivElement;
   onMessage: ((text: string) => void) | null = null;
+  /** Kat's line when something deserves one (equip quips, infusion lines). */
+  onBark: ((text: string) => void) | null = null;
 
   constructor(hudRoot: HTMLElement) {
     this.el = document.createElement('div');
@@ -45,14 +48,26 @@ export class InventoryMenu {
         if (already >= 0) this.marked.splice(already, 1);
         else if (this.marked.length < 3) this.marked.push(def.id);
       } else if (this.index === items.length) {
-        const recipe = inv.tryCombine(this.marked);
-        this.onMessage?.(
-          recipe === 'locked'
-            ? 'The parts fit together somehow... she needs to see it done first.'
-            : recipe
-              ? recipe.line
-              : "Those don't combine.",
-        );
+        // A single marked gun strips into its best part (never the wielded one).
+        const strippable = this.marked.length === 1 && ITEMS[this.marked[0]!].category === 'gun'
+          ? this.marked[0]!
+          : null;
+        if (strippable && state.weaponId === strippable) {
+          this.onMessage?.('Not the one in her hands.');
+        } else if (strippable && inv.remove(strippable)) {
+          const part = GUN_STATS[strippable]!.strips;
+          inv.add(part);
+          this.onMessage?.(`Stripped the ${ITEMS[strippable].name} — kept the ${ITEMS[part].name}.`);
+        } else {
+          const recipe = inv.tryCombine(this.marked);
+          this.onMessage?.(
+            recipe === 'locked'
+              ? 'The parts fit together somehow... she needs to see it done first.'
+              : recipe
+                ? recipe.line
+                : "Those don't combine.",
+          );
+        }
         this.marked = [];
       } else {
         this.toggle();
@@ -60,9 +75,10 @@ export class InventoryMenu {
       }
     }
 
-    // Use consumable with interact.
+    // Use / wear / wield / install with interact.
     if (input.interactJust && this.index < items.length) {
       const [def] = items[this.index]!;
+      const infusion = infusionForInjector(def.id);
       if (def.id === 'bandage' && inv.remove('bandage')) {
         state.hp = Math.min(state.maxHp, state.hp + 25);
         this.onMessage?.('Bandaged up. (+25)');
@@ -72,19 +88,57 @@ export class InventoryMenu {
       } else if (def.id === 'ammo9' && inv.remove('ammo9', 1)) {
         state.reserveAmmo += 1;
         this.onMessage?.('Rounds pocketed for reloads.');
+      } else if (infusion) {
+        // Chimeric DNA, self-administered. An ER doctor knows the vein.
+        if (state.infusions[infusion.id]) {
+          this.onMessage?.('Already running in her blood.');
+        } else if (inv.remove(def.id)) {
+          state.infusions[infusion.id] = true;
+          this.onMessage?.(`INFUSED: ${infusion.name}.`);
+          this.onBark?.(infusion.unlockLine);
+        }
+      } else if (def.category === 'gear' && def.slot) {
+        if (state.equipped[def.slot] === def.id) {
+          delete state.equipped[def.slot];
+          this.onMessage?.(`${def.name} off.`);
+        } else {
+          state.equipped[def.slot] = def.id;
+          this.onMessage?.(`Wearing the ${def.name}.`);
+          if (def.equipLine) this.onBark?.(def.equipLine);
+        }
+      } else if (def.category === 'gun') {
+        if (state.weaponId === def.id) {
+          state.weaponId = 'dutyPistol';
+          this.onMessage?.('Back to the duty pistol.');
+        } else {
+          state.weaponId = def.id;
+          this.onMessage?.(`Wielding the ${def.name}.`);
+        }
+        state.ammoInClip = Math.min(state.ammoInClip, state.clipSize);
+      } else if (def.category === 'gunPart' && inv.remove(def.id)) {
+        if (def.id === 'partBarrel') state.mods.damage++;
+        else if (def.id === 'partMag') state.mods.clip++;
+        else if (def.id === 'partAction') state.mods.action++;
+        else state.mods.grip++;
+        this.onMessage?.(`${def.name} installed. It moves with her now, gun to gun.`);
       }
     }
 
-    this.render(items);
+    this.render(items, state);
   }
 
-  private render(items: [(typeof ITEMS)[ItemId], number][]): void {
-    const lines: string[] = ['<div style="color:#8fb0c0;margin-bottom:6px">INVENTORY — KAT WEISS</div>'];
+  private render(items: [(typeof ITEMS)[ItemId], number][], state: GameState): void {
+    const lines: string[] = [
+      '<div style="color:#8fb0c0;margin-bottom:6px">INVENTORY — KAT WEISS</div>',
+      `<div style="font-size:11px;color:#7a8a94;margin-bottom:6px">${state.weapon.name} — dmg ${Math.round(state.gunDamage)} · clip ${state.clipSize} · reload ${state.reloadSeconds.toFixed(1)}s</div>`,
+    ];
     items.forEach(([def, n], i) => {
       const sel = i === this.index;
       const mark = this.marked.includes(def.id) ? '[*] ' : '[ ] ';
+      const wornTag = def.slot && state.equipped[def.slot] === def.id ? ' <span style="color:#9fb8a0">[worn]</span>'
+        : def.category === 'gun' && state.weaponId === def.id ? ' <span style="color:#9fb8a0">[wielded]</span>' : '';
       lines.push(
-        `<div style="color:${sel ? '#ffe28a' : '#cfd8dd'}">${sel ? '&#9656; ' : '&nbsp;&nbsp;'}${mark}${def.name} ×${n}</div>`,
+        `<div style="color:${sel ? '#ffe28a' : '#cfd8dd'}">${sel ? '&#9656; ' : '&nbsp;&nbsp;'}${mark}${def.name} ×${n}${wornTag}</div>`,
       );
     });
     if (items.length === 0) lines.push('<div style="color:#5a6166">&nbsp;&nbsp;(empty pockets)</div>');

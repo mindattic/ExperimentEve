@@ -25,10 +25,12 @@ const LOOT: Record<string, LootRoll[]> = {
     { item: 'pearlNecklace', min: 1, max: 1, chance: 0.22 },
     { item: 'rag', min: 1, max: 2, chance: 0.65 },
     { item: 'beanBuddy', min: 1, max: 1, chance: 0.2 },
+    { item: 'denimPants', min: 1, max: 1, chance: 0.4 },
   ],
   'bedroom:closet': [
     { item: 'ammo9', min: 4, max: 6, chance: 0.45 },
     { item: 'rag', min: 1, max: 2, chance: 0.5 },
+    { item: 'puffyShirt', min: 1, max: 1, chance: 0.35 },
   ],
   'bathroom:cabinet': [
     { item: 'alcohol', min: 1, max: 1, chance: 0.55 },

@@ -11,6 +11,8 @@ export interface SaveData {
   abilities?: GameState['abilities'];
   infusions?: GameState['infusions'];
   equipped?: GameState['equipped'];
+  weaponId?: GameState['weaponId'];
+  mods?: GameState['mods'];
   hp: number;
   maxHp: number;
   pe: number;
@@ -41,6 +43,8 @@ export function saveGame(
     abilities: { ...state.abilities },
     infusions: { ...state.infusions },
     equipped: { ...state.equipped },
+    weaponId: state.weaponId,
+    mods: { ...state.mods },
     hp: state.hp,
     maxHp: state.maxHp,
     pe: state.pe,
@@ -80,10 +84,12 @@ export function applySave(data: SaveData, state: GameState, inv: Inventory): voi
   state.abilities = { rapidFire: false, ...data.abilities };
   state.infusions = { ...state.infusions, ...data.infusions };
   state.equipped = { ...data.equipped };
+  state.weaponId = data.weaponId ?? 'dutyPistol';
+  state.mods = { damage: 0, clip: 0, action: 0, grip: 0, ...data.mods };
   state.recomputeDerived();
   state.hp = data.hp;
   state.pe = data.pe;
-  state.ammoInClip = data.ammoInClip;
+  state.ammoInClip = Math.min(data.ammoInClip, state.clipSize);
   state.reserveAmmo = data.reserveAmmo;
   state.limit = data.limit;
   state.flags = { ...data.flags };

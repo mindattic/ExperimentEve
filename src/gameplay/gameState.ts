@@ -1,5 +1,5 @@
 import type { InfusionId } from './infusions';
-import { ITEMS, type GearSlot, type ItemId } from './inventory';
+import { ITEMS, GUN_STATS, DUTY_PISTOL, type GearSlot, type ItemId, type GunStats } from './inventory';
 
 export interface SkillPoints {
   health: number;
@@ -73,9 +73,22 @@ export class GameState {
   pe = 40;
   peRegenPerSec = 2.5;
 
-  clipSize = 8;
   ammoInClip = 8;
   reserveAmmo = 0;
+
+  // ---- the gun in her hands (tinkering: wield / strip / install) --------
+  /** Which gun is wielded: an inventory gun id, or her own duty pistol. */
+  weaponId: ItemId | 'dutyPistol' = 'dutyPistol';
+  /** Permanent installed mods — they move with her, not with the gun. */
+  mods = { damage: 0, clip: 0, action: 0, grip: 0 };
+
+  get weapon(): GunStats {
+    return this.weaponId === 'dutyPistol' ? DUTY_PISTOL : (GUN_STATS[this.weaponId] ?? DUTY_PISTOL);
+  }
+
+  get clipSize(): number {
+    return this.weapon.clip + this.mods.clip * 4;
+  }
 
   /** Limit gauge 0..100; full enables Precision Aim. */
   limit = 0;
@@ -90,7 +103,8 @@ export class GameState {
   }
 
   get atbRatePerSec(): number {
-    return 0.16 * (1 + this.skills.speed * 0.06) * (this.hasteTimer > 0 ? 1.7 : 1);
+    return 0.16 * (1 + this.skills.speed * 0.06) * (this.hasteTimer > 0 ? 1.7 : 1)
+      * this.weapon.atbMult * (1 + this.mods.grip * 0.1);
   }
 
   get moveSpeed(): number {
@@ -98,11 +112,12 @@ export class GameState {
   }
 
   get gunDamage(): number {
-    return 10 + this.skills.damage * 1.5;
+    return this.weapon.damage + this.skills.damage * 1.5 + this.mods.damage * 3;
   }
 
   get reloadSeconds(): number {
-    return 1.6 * Math.max(0.4, 1 - this.skills.reload * 0.07);
+    return 1.6 * this.weapon.reloadMult
+      * Math.max(0.25, (1 - this.skills.reload * 0.07) * Math.pow(0.7, this.mods.action));
   }
 
   /** Move rounds from reserve into the clip. Returns rounds loaded. */

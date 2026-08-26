@@ -16,10 +16,13 @@ export type ItemId =
   | 'blueDress'
   // gear: armor is just normal clothes. Kat is an ER doctor, not a knight.
   | 'labCoat' | 'yellowVest' | 'puffyShirt' | 'denimPants'
+  // guns (all 9mm-fed in the slice) and the parts stripped out of them
+  | 'gunSnub' | 'gunErasure' | 'gunLongslide'
+  | 'partBarrel' | 'partMag' | 'partAction' | 'partGrip'
   // keepsakes: cannot be sold, spent, or lost
   | 'katsCard';
 
-export type ItemCategory = 'component' | 'crafted' | 'consumable' | 'ammo' | 'bauble' | 'gear' | 'keepsake';
+export type ItemCategory = 'component' | 'crafted' | 'consumable' | 'ammo' | 'bauble' | 'gear' | 'gun' | 'gunPart' | 'keepsake';
 
 export type GearSlot = 'torso' | 'legs';
 
@@ -154,6 +157,34 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'blueDress', name: 'The Blue Dress', category: 'bauble',
     desc: 'Navy blue. Dry-clean only. It has been through something historic. The pawnbroker pays double and asks nothing.',
   },
+  gunSnub: {
+    id: 'gunSnub', name: '.38 Snub (rechambered)', category: 'gun',
+    desc: 'Rechambered for 9mm by someone with more nerve than tooling. Light, quick, five shots of commitment.',
+  },
+  gunErasure: {
+    id: 'gunErasure', name: 'Erasure Sidearm', category: 'gun',
+    desc: 'Government issue, serial filed by the government. Twelve rounds. The magazine assumes you will miss.',
+  },
+  gunLongslide: {
+    id: 'gunLongslide', name: 'Longslide 9mm', category: 'gun',
+    desc: 'Competition iron from the sporting-goods cage. Heavy, slow, and it does not miss so much as decline.',
+  },
+  partBarrel: {
+    id: 'partBarrel', name: 'Rifled Barrel', category: 'gunPart',
+    desc: 'Match-grade. Stripped from something that deserved better. +3 damage, installed.',
+  },
+  partMag: {
+    id: 'partMag', name: 'Extended Magazine', category: 'gunPart',
+    desc: 'Holds four more chances. +4 clip, installed.',
+  },
+  partAction: {
+    id: 'partAction', name: 'Polished Action', category: 'gunPart',
+    desc: 'Somebody\'s thousand hours of dry-firing, inherited. -30% reload, installed.',
+  },
+  partGrip: {
+    id: 'partGrip', name: 'Skeleton Grip', category: 'gunPart',
+    desc: 'Drilled out for weight. The gun stops arguing with her hands. +ATB, installed.',
+  },
   labCoat: {
     id: 'labCoat', name: 'Lab Coat', category: 'gear', slot: 'torso', armor: 0.05,
     desc: 'KATHERINE WEISS, M.D. — EMERGENCY MEDICINE. She left in it. The pockets still work; that\'s most of medicine.',
@@ -179,6 +210,32 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     desc: 'She\'s carried it for three weeks. It isn\'t sealed. She hasn\'t signed it. Not for sale.',
   },
 };
+
+// ---- gun tinkering ------------------------------------------------------
+// Wield any found gun; strip the ones you don't carry into their best part;
+// install parts permanently on whatever you're holding. Unique combinations
+// out of common iron — the tinkering IS the build.
+
+export interface GunStats {
+  name: string;
+  damage: number;
+  clip: number;
+  /** Reload-time multiplier (heavier actions reload slower). */
+  reloadMult: number;
+  /** Portability: ATB-rate multiplier (heavy guns slow the bar). */
+  atbMult: number;
+  /** What stripping it yields. */
+  strips: ItemId;
+}
+
+export const GUN_STATS: Partial<Record<ItemId, GunStats>> = {
+  gunSnub: { name: '.38 Snub', damage: 13, clip: 5, reloadMult: 0.85, atbMult: 1.08, strips: 'partAction' },
+  gunErasure: { name: 'Erasure Sidearm', damage: 12, clip: 12, reloadMult: 1.15, atbMult: 0.95, strips: 'partMag' },
+  gunLongslide: { name: 'Longslide 9mm', damage: 16, clip: 6, reloadMult: 1.25, atbMult: 0.88, strips: 'partBarrel' },
+};
+
+/** Kat's arrival weapon — hers, not an item; strips to a grip if replaced. */
+export const DUTY_PISTOL: GunStats = { name: 'Duty Pistol', damage: 10, clip: 8, reloadMult: 1, atbMult: 1, strips: 'partGrip' };
 
 export interface Recipe {
   inputs: ItemId[];
