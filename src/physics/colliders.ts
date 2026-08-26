@@ -7,11 +7,15 @@ import * as THREE from 'three';
 export interface AABBCollider {
   kind: 'aabb';
   minX: number; minZ: number; maxX: number; maxZ: number;
+  /** Height of the obstruction: bodies at or above this pass over it. */
+  topY?: number;
 }
 
 export interface SegmentCollider {
   kind: 'segment';
   ax: number; az: number; bx: number; bz: number;
+  /** Height of the obstruction: bodies at or above this pass over it. */
+  topY?: number;
 }
 
 export type Collider = AABBCollider | SegmentCollider;
@@ -68,15 +72,20 @@ function cross(ax: number, az: number, bx: number, bz: number, px: number, pz: n
 
 const ITERATIONS = 3;
 
-/** Mutates pos (x,z used) to push a circle of `radius` out of all colliders. */
+/**
+ * Mutates pos (x,z used) to push a circle of `radius` out of all colliders.
+ * `bodyY`: the body's floor height — colliders it stands above are skipped.
+ */
 export function resolveCircle(
   pos: THREE.Vector3,
   radius: number,
   colliders: readonly Collider[],
+  bodyY = 0,
 ): void {
   for (let iter = 0; iter < ITERATIONS; iter++) {
     let moved = false;
     for (const c of colliders) {
+      if (c.topY !== undefined && bodyY >= c.topY - 0.05) continue;
       if (c.kind === 'aabb') moved = pushOutAABB(pos, radius, c) || moved;
       else moved = pushOutSegment(pos, radius, c) || moved;
     }

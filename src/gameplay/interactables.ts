@@ -59,7 +59,9 @@ const LOOT: Record<string, LootRoll[]> = {
   ],
 };
 
-export type InteractKind = 'container' | 'salvage' | 'inspect' | 'save' | 'pickup' | 'trade' | 'alarm' | 'chop' | 'bike';
+export type InteractKind =
+  | 'container' | 'salvage' | 'inspect' | 'save' | 'pickup' | 'trade' | 'alarm' | 'chop' | 'bike'
+  | 'ladder';
 
 export type SalvageType = 'car' | 'couch' | 'trashPile' | 'bentBike' | 'semi';
 
@@ -115,6 +117,10 @@ export interface InteractableDef {
   salvageType?: SalvageType;
   /** chop: GameState flag set when the boards come down. */
   chopFlag?: string;
+  /** Floor height this interactable lives at (default 0 = street). */
+  floorY?: number;
+  /** ladder: where the climb ends [x, z, floorY]. */
+  ladderTo?: [number, number, number];
   once?: boolean;
 }
 

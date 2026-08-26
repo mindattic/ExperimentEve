@@ -55,6 +55,7 @@ export function loadLevel(def: LevelDef): LoadedLevel {
   const gated: LoadedLevel['gated'] = [];
   for (const w of def.walls) {
     const col = segment(w.a[0], w.a[1], w.b[0], w.b[1]);
+    col.topY = w.h ?? 2.7;
     const gate = w.gated ? { flag: w.gated, collider: col, mesh: undefined as THREE.Object3D | undefined } : null;
     if (gate) gated.push(gate);
     else colliders.push(col);
@@ -86,12 +87,18 @@ export function loadLevel(def: LevelDef): LoadedLevel {
     );
     mesh.position.set((b.min[0] + b.max[0]) / 2, (b.y ?? 0) + h / 2, (b.min[1] + b.max[1]) / 2);
     root.add(mesh);
-    if (!b.noCollide) colliders.push(aabb(b.min[0], b.min[1], b.max[0], b.max[1]));
+    if (!b.noCollide) {
+      const col = aabb(b.min[0], b.min[1], b.max[0], b.max[1]);
+      col.topY = (b.y ?? 0) + h;
+      colliders.push(col);
+    }
   }
 
   const linkTex = chainlinkTexture();
   for (const f of def.fences) {
-    colliders.push(segment(f.a[0], f.a[1], f.b[0], f.b[1]));
+    const fcol = segment(f.a[0], f.a[1], f.b[0], f.b[1]);
+    fcol.topY = f.h ?? 2.2;
+    colliders.push(fcol);
     const len = Math.hypot(f.b[0] - f.a[0], f.b[1] - f.a[1]);
     const h = f.h ?? 2.2;
     const tex = linkTex.clone();

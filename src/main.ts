@@ -313,6 +313,7 @@ function nearestInteractable(): Interactable | null {
   let bestD = Infinity;
   for (const i of level.interactables) {
     if (i.used) continue;
+    if (Math.abs((i.floorY ?? 0) - player.floorY) > 1) continue; // same floor only
     const d = Math.hypot(i.x - player.position.x, i.z - player.position.z);
     if (d < i.radius && d < bestD) {
       bestD = d;
@@ -320,6 +321,19 @@ function nearestInteractable(): Interactable | null {
     }
   }
   return best;
+}
+
+// Scripted ladder climb: locks the player and drives position directly.
+let climb: { t: number; dur: number; from: THREE.Vector3; to: THREE.Vector3 } | null = null;
+function startClimb(to: [number, number, number]): void {
+  climb = {
+    t: 0,
+    dur: 1.3,
+    from: player.position.clone(),
+    to: new THREE.Vector3(to[0], to[2], to[1]),
+  };
+  latch.reset();
+  sfx.footstep(false);
 }
 
 function handleInteract(i: Interactable): void {
@@ -466,6 +480,14 @@ function handleInteract(i: Interactable): void {
     }
     case 'bike': {
       toggleBike(i);
+      break;
+    }
+    case 'ladder': {
+      if (player.riding) {
+        hud.message('Not with the bike. She\'s strong, not circus-strong.');
+        break;
+      }
+      if (i.ladderTo) startClimb(i.ladderTo);
       break;
     }
     case 'save': {
@@ -776,12 +798,12 @@ function frame(): void {
     }
   };
   if (battle.active) {
-    player.locked = !battle.playerControlled || menuOpen || chiming;
+    player.locked = !battle.playerControlled || menuOpen || chiming || climb !== null;
     if (battle.playerControlled && !menuOpen && !chiming && sample.dodgeJust) tryDodge();
     battle.update(realDt, gameDt, sample, player, cameraMgr.camera, colliders);
   } else {
-    player.locked = menuOpen || chiming;
-    if (!menuOpen && !chiming && sample.dodgeJust) tryDodge();
+    player.locked = menuOpen || chiming || climb !== null;
+    if (!menuOpen && !chiming && !climb && sample.dodgeJust) tryDodge();
     for (const t of level.triggers) {
       if (!t.fired && triggerContains(t, player.position.x, player.position.z)) {
         t.fired = true;
@@ -893,6 +915,22 @@ function frame(): void {
   if (ambienceStarted) {
     const fireDist = Math.hypot(player.position.x, player.position.z + 22);
     ambience.setFireIntensity(state.flags['fireOut'] ? 0 : Math.max(0, 1 - fireDist / 22));
+  }
+
+  // Ladder climbs drive the player directly.
+  if (climb) {
+    player.locked = true;
+    climb.t += realDt;
+    const k = Math.min(1, climb.t / climb.dur);
+    const ease = k * k * (3 - 2 * k);
+    player.position.lerpVectors(climb.from, climb.to, ease);
+    player.facing = Math.atan2(climb.to.x - climb.from.x, climb.to.z - climb.from.z);
+    if (k >= 1) {
+      player.floorY = climb.to.y;
+      player.position.y = climb.to.y;
+      climb = null;
+      player.locked = false;
+    }
   }
 
   // Train intro: she rides in on the freight line and bails.

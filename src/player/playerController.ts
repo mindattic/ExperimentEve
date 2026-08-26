@@ -14,6 +14,8 @@ export class PlayerController {
   turnRate = 12; // rad/s toward the move direction
   /** Bicycle: much faster, wide turns, momentum. */
   riding = false;
+  /** Current floor height (0 = street, 3.7 = the pawnshop roof, ...). */
+  floorY = 0;
 
   private readonly vel = new THREE.Vector3();
   private readonly dodgeDir = new THREE.Vector3();
@@ -57,7 +59,8 @@ export class PlayerController {
     if (this.dodgeTimer > 0) {
       this.dodgeTimer -= dt;
       this.object.position.addScaledVector(this.dodgeDir, 8.5 * dt);
-      resolveCircle(this.object.position, PLAYER_RADIUS, colliders);
+      resolveCircle(this.object.position, PLAYER_RADIUS, colliders, this.floorY);
+      this.object.position.y = this.floorY;
       this.facing = Math.atan2(this.dodgeDir.x, this.dodgeDir.z);
       this.object.rotation.y = this.facing;
       return;
@@ -81,7 +84,9 @@ export class PlayerController {
       if (this.vel.lengthSq() < 1e-4) this.vel.set(0, 0, 0);
     }
     this.object.position.addScaledVector(this.vel, dt);
-    resolveCircle(this.object.position, PLAYER_RADIUS, colliders);
+    resolveCircle(this.object.position, PLAYER_RADIUS, colliders, this.floorY);
+    // Cutscenes (train jump, climbs) drive y themselves while locked.
+    if (!this.locked) this.object.position.y = this.floorY;
     this.object.rotation.y = this.facing;
   }
 }

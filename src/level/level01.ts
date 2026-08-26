@@ -76,6 +76,16 @@ export const LEVEL01: LevelDef = {
       fov: 60,
     },
     {
+      // Pawnshop roof — reached by the fire escape. Footprint sits outside
+      // every street zone's polygon, so no elevation logic is needed.
+      id: 'pawnRoof',
+      polygon: [[6, 6], [12, 6], [12, 10], [6, 10]],
+      cameraPosition: [6.8, 7.2, 4.8],
+      cameraLookAt: [9.5, 3.9, 8.5],
+      forward: [0, 1],
+      fov: 58,
+    },
+    {
       id: 'pocketYard',
       polygon: [[18, -16], [23, -16], [23, -6], [18, -6]],
       cameraPosition: [18.8, 3.6, -15.2],
@@ -147,6 +157,11 @@ export const LEVEL01: LevelDef = {
     // Garage (brick shell), door gap x[23,26] on the south wall.
     // Boarded shortcut panel (axe-choppable) in the east alley fence line.
     { a: [4, 18], b: [4, 19.2], tex: 'plank', h: 2.1, gated: 'chopped1' },
+    // Pawnshop roof parapet: invisible, tall enough to hold at roof height.
+    { a: [6, 6], b: [12, 6], invisible: true, h: 99 },
+    { a: [12, 6], b: [12, 10], invisible: true, h: 99 },
+    { a: [12, 10], b: [6, 10], invisible: true, h: 99 },
+    { a: [6, 10], b: [6, 6], invisible: true, h: 99 },
     // The Observer's gate: electric-locked side gate in the corridor fence.
     { a: [23, -13], b: [23, -11.6], tex: 'plank', h: 2.2, gated: 'observerGate' },
     // Pocket yard enclosure (west/south).
@@ -233,6 +248,9 @@ export const LEVEL01: LevelDef = {
     { min: [3.4, 23.6], max: [3.8, 24.6], h: 0.9, color: 0x8a4420, noCollide: true },
     // Payphone by the pawnshop (the Observer's other channel).
     { min: [12.3, 4.3], max: [12.9, 4.9], h: 2.2, color: 0x2a4a6a },
+    // Fire escape rails on the pawnshop's east face.
+    { min: [12.02, 8.1], max: [12.14, 8.22], h: 3.2, y: 0.5, color: 0x3a3f44, noCollide: true },
+    { min: [12.02, 8.58], max: [12.14, 8.7], h: 3.2, y: 0.5, color: 0x3a3f44, noCollide: true },
   ],
 
   ground: [
@@ -298,6 +316,24 @@ export const LEVEL01: LevelDef = {
     },
     { id: 'nest1', x: -12.5, z: 17, radius: 1.6, prompt: 'The nest', kind: 'inspect', once: false },
     { id: 'payphone1', x: 12.6, z: 4.6, prompt: 'Answer the payphone', kind: 'inspect', once: false },
+    // The fire escape up the pawnshop's east face.
+    {
+      id: 'ladderUp', x: 12.5, z: 8.4, prompt: 'Climb the fire escape', kind: 'ladder', once: false,
+      ladderTo: [11.2, 8.4, 3.65],
+    },
+    {
+      id: 'ladderDown', x: 11.6, z: 8.4, floorY: 3.65, prompt: 'Climb down', kind: 'ladder', once: false,
+      ladderTo: [12.6, 8.4, 0],
+    },
+    {
+      id: 'roofStash', x: 8.2, z: 8.6, floorY: 3.65, prompt: 'Open the tar-paper bundle', kind: 'pickup',
+      inspectText: 'Somebody slept up here, above it all. Rounds, a first-aid kit, and a pearl necklace in a sock.',
+      grants: [{ item: 'ammo9', n: 6 }, { item: 'medkit', n: 1 }, { item: 'pearlNecklace', n: 1 }],
+    },
+    {
+      id: 'roofView', x: 7, z: 7, floorY: 3.65, prompt: 'Look north, over the water', kind: 'inspect', once: false,
+      inspectText: 'From up here: the whole North End, the bridge, and the Island — lit like a shift change. The boats are still running.',
+    },
     {
       id: 'grill1', x: -11.7, z: 21.5, prompt: 'Look at the grill', kind: 'inspect', once: false,
       inspectText: 'The grill is cold. Plates set for five. The cookout stopped between the second and third burger.',
