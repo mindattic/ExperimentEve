@@ -8,15 +8,13 @@
 //   npm run universe -- search <text>
 //   npm run universe -- stats
 //   npm run universe -- pull        (Prose Hub -> universe/eve.prose-snapshot.json)
-//   npm run universe -- push        (prose.cmd --universe-import <this file>)
+//   npm run universe -- push        (this file -> Prose Hub POST /api/universes/EVE/import)
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { spawnSync } from 'node:child_process';
 
 const HUB = 'http://127.0.0.1:5900';
-const PROSE_CLI_PROJ = 'D:\\Projects\\MindAttic\\Prose\\v3\\Prose.Cli';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const file = join(here, '..', 'universe', 'eve.universe.json');
@@ -100,13 +98,26 @@ switch (cmd) {
     break;
   }
   case 'push': {
-    const r = spawnSync(
-      'dotnet',
-      ['run', '--project', PROSE_CLI_PROJ, '--', '--universe-import', file],
-      { stdio: 'inherit', shell: false },
-    );
-    if (r.status !== 0) {
-      fail('push failed — prose --universe-import is built by RFC 0007 (/eve in the Prose CLI).');
+    // Pushes go THROUGH Prose Hub — never the CLI direct (house rule).
+    // RFC 0007 §5: POST the interchange JSON to the Hub's import endpoint.
+    try {
+      const res = await fetch(`${HUB}/api/universes/EVE/import`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: readFileSync(file, 'utf8'),
+      });
+      const r = await res.json().catch(() => null);
+      if (!res.ok || !r) {
+        fail(`Hub import failed (${res.status}): ${r ? JSON.stringify(r.errors ?? r) : 'no body'}`);
+      }
+      console.log(`[universe-import via Hub] universe: ${data.universe.id}`);
+      console.log(`  entities created : ${r.entitiesCreated}`);
+      console.log(`  entities updated : ${r.entitiesUpdated}`);
+      console.log(`  stubs created    : ${r.stubsCreated}`);
+      console.log(`  stubs promoted   : ${r.stubsPromoted}`);
+      console.log(`  edges created    : ${r.edgesCreated}`);
+    } catch (e) {
+      fail(`Prose Hub not reachable at ${HUB} (${e.message}). Start it — pushes only go through the Hub.`);
     }
     break;
   }
