@@ -36,6 +36,14 @@ export abstract class Enemy {
   parts: EnemyPart[] = [];
   radius = 0.5;
 
+  /** Seconds since death; drives the corpse hold + sink in updateAlways. */
+  private deathAge = 0;
+
+  /** The corpse has finished sinking — safe to pull from the scene. */
+  get deathDone(): boolean {
+    return this.dead && this.deathAge >= 2.0;
+  }
+
   protected hurtFlash = 0;
   private flashables: THREE.MeshLambertMaterial[] = [];
 
@@ -152,6 +160,18 @@ export abstract class Enemy {
 
   /** Runs on realDt — hurt flash decay, weak-point glow. */
   updateAlways(realDt: number): void {
+    // Death sequence: the crumple (onDeath's pose) holds for a beat, then
+    // the corpse sinks into the street and shrinks away. Composes with any
+    // subclass onDeath — this only touches y and scale, never the pose.
+    if (this.dead) {
+      this.deathAge += realDt;
+      const sink = Math.max(0, this.deathAge - 0.9);
+      if (sink > 0) {
+        this.object.position.y -= realDt * 1.4;
+        const s = Math.max(0.05, 1 - sink * 0.4);
+        this.object.scale.setScalar(s);
+      }
+    }
     if (this.hurtFlash > 0) {
       this.hurtFlash -= realDt;
       const on = this.hurtFlash > 0 && Math.floor(this.hurtFlash * 30) % 2 === 0;

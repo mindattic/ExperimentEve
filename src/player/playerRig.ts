@@ -63,7 +63,23 @@ export class PlayerRig {
   phase = 0;
   private idleTime = 0;
   private aimBlend = 0;
+  private recoilT = 0;
+  private flinchT = 0;
+  private flinchSide = 1;
+  /** 0 healthy .. 1 nearly dead — hunches her over as it climbs. */
+  hurtK = 0;
   pose: RigPose = 'explore';
+
+  /** Gun recoil: the shot kicks her arm up and shoulders back. */
+  kick(): void {
+    this.recoilT = 1;
+  }
+
+  /** Taking a hit: a fast twist away from the wound. */
+  flinch(): void {
+    this.flinchT = 1;
+    this.flinchSide = Math.random() < 0.5 ? -1 : 1;
+  }
 
   constructor() {
     const HIP_Y = 0.92;
@@ -235,10 +251,14 @@ export class PlayerRig {
     this.lowerLegL.rotation.x = Math.max(0, -Math.sin(this.phase)) * 0.9 * speed01;
     this.lowerLegR.rotation.x = Math.max(0, Math.sin(this.phase)) * 0.9 * speed01;
 
-    // Hip bob + slight forward lean at speed.
+    // Hip bob + slight forward lean at speed. Low HP hunches her over —
+    // heavier breathing, shoulders in; the body tells the health bar's story.
     this.hips.position.y = 0.92 + (moving ? Math.abs(Math.cos(this.phase)) * 0.035 * speed01 : 0)
-      + (!moving ? Math.sin(this.idleTime * 1.6) * 0.006 : 0);
-    this.torso.rotation.x = 0.12 * speed01;
+      + (!moving ? Math.sin(this.idleTime * 1.6) * 0.006 : 0)
+      - this.hurtK * 0.05;
+    this.torso.rotation.x = 0.12 * speed01
+      + this.hurtK * (0.18 + Math.sin(this.idleTime * 3.2) * 0.03);
+    this.head.rotation.x = -this.hurtK * 0.14; // eyes stay up even hunched
 
     // Arms: counter-swing; blend toward aim pose when aiming.
     const armSwing = Math.sin(this.phase) * 0.45 * speed01;
@@ -252,6 +272,29 @@ export class PlayerRig {
     this.upperArmR.rotation.x = armSwing * (1 - a) + -1.5 * a;
     this.upperArmR.rotation.z = -0.08 * (1 - a);
     this.forearmR.rotation.x = -0.25 * (1 - a);
+
+    // Recoil: a sharp kick that snaps in and eases out. The gun arm jumps,
+    // the shoulders roll back, and it's gone in a quarter second.
+    if (this.recoilT > 0) {
+      this.recoilT = Math.max(0, this.recoilT - dt * 4.5);
+      const r = this.recoilT * this.recoilT;
+      this.upperArmR.rotation.x -= 0.45 * r;
+      this.forearmR.rotation.x -= 0.3 * r;
+      this.torso.rotation.x -= 0.08 * r;
+      this.head.rotation.x += 0.06 * r;
+    }
+
+    // Flinch: hit reaction — a fast twist away, arms pulled in.
+    if (this.flinchT > 0) {
+      this.flinchT = Math.max(0, this.flinchT - dt * 3.5);
+      const f = Math.sin(this.flinchT * Math.PI) * this.flinchT;
+      this.torso.rotation.z = 0.22 * f * this.flinchSide;
+      this.torso.rotation.x += 0.18 * f;
+      this.upperArmL.rotation.z += 0.4 * f;
+      this.upperArmR.rotation.z -= 0.4 * f;
+    } else {
+      this.torso.rotation.z = 0;
+    }
 
     // Dodge leap: lean back hard, knees up, arms flared for balance.
     if (dodgeK > 0) {

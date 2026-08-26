@@ -44,6 +44,9 @@ export class BattleSystem {
   onAtbReady: (() => void) | null = null;
   /** A Grafted's segment tore off at this position — main throws the gore. */
   onSever: ((pos: THREE.Vector3) => void) | null = null;
+  /** An enemy just died (any damage path) — main throws gore/stain/shake. */
+  onKill: ((e: Enemy, wasLast: boolean) => void) | null = null;
+  private readonly killsSeen = new Set<Enemy>();
   private pendingCrit: 'none' | 'weak' | 'body' | 'miss' = 'none';
   private sweepT = 0;
   private lockedY = 0.5;
@@ -52,7 +55,8 @@ export class BattleSystem {
   onMessage: ((text: string) => void) | null = null;
   /** Damage floater hook: world position of the wound, amount, crit flag. */
   onDamage: ((worldPos: THREE.Vector3, amount: number, crit: boolean) => void) | null = null;
-  onShot: (() => void) | null = null;
+  /** A shot went off; wound is where it's headed (undefined = into the air). */
+  onShot: ((wound?: THREE.Vector3) => void) | null = null;
   onVictory: (() => void) | null = null;
   onDefeat: (() => void) | null = null;
   /** Supplied by main: does Kat carry the fire axe? */
@@ -74,16 +78,29 @@ export class BattleSystem {
     hudRoot: HTMLElement,
     private readonly canvas: HTMLCanvasElement,
   ) {
+    // Range dome: a sparse hemisphere overhead + a crisp ring on the ground
+    // at exactly weapon range. The ring does the communicating; the dome
+    // just hints at the volume without filling the screen with wireframe.
     this.dome = new THREE.Mesh(
-      new THREE.SphereGeometry(WEAPON_RANGE, 14, 8),
+      new THREE.SphereGeometry(WEAPON_RANGE, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2),
       new THREE.MeshBasicMaterial({
         color: 0x55ffbb,
         wireframe: true,
         transparent: true,
-        opacity: 0.09,
+        opacity: 0.05,
         depthWrite: false,
       }),
     );
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(WEAPON_RANGE * 0.97, WEAPON_RANGE, 40),
+      new THREE.MeshBasicMaterial({
+        color: 0x55ffbb, transparent: true, opacity: 0.5, depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.05;
+    this.dome.add(ring);
     this.dome.visible = false;
     scene.add(this.dome);
 
@@ -167,6 +184,7 @@ export class BattleSystem {
   start(enemies: Enemy[]): void {
     this.setLetterbox(true);
     this.enemies = enemies;
+    this.killsSeen.clear();
     // Species she's fought before: their weak points glow on sight.
     for (const e of enemies) {
       if (this.state.knownWeaknesses.includes(e.displayName)) e.revealWeakness();
@@ -192,6 +210,14 @@ export class BattleSystem {
 
     for (const e of this.enemies) {
       e.updateAlways(realDt);
+      // Death is announced from here so every damage path (shots, melee,
+      // molotovs, cat strikes, bike rams) gets the same send-off.
+      if (e.dead && !this.killsSeen.has(e)) {
+        this.killsSeen.add(e);
+        this.onKill?.(e, this.enemiesAlive.length === 0);
+      }
+      // Finished corpses leave the street mid-fight.
+      if (e.deathDone && e.object.parent) this.scene.remove(e.object);
       if (e instanceof GraftedChimera) {
         for (const sev of e.drainSevered()) {
           this.onMessage?.(`${sev.label} tears away!`);
@@ -259,7 +285,9 @@ export class BattleSystem {
         for (const e of this.enemiesAlive) {
           nearest = Math.min(nearest, e.object.position.distanceTo(player.position));
         }
-        if (nearest > 18) {
+        // Finite check: with every enemy dead this is Infinity, and that's
+        // a victory (checkVictory below), not a disengage.
+        if (Number.isFinite(nearest) && nearest > 18) {
           this.onMessage?.('She leaves them behind.');
           this.end();
           return;
@@ -733,20 +761,23 @@ export class BattleSystem {
     const s = this.state;
     if (s.ammoInClip <= 0) return;
     s.ammoInClip--;
-    this.onShot?.();
+    const t = this.targets[this.targetIndex];
+    const hasTarget = !!t && !t.enemy.dead && this.pendingCrit !== 'miss';
+    const wound = hasTarget
+      ? t!.part.node.getWorldPosition(new THREE.Vector3())
+      : undefined;
+    this.onShot?.(wound);
 
     if (this.pendingCrit === 'miss') {
       this.onMessage?.('The cross finds nothing but air.');
       this.spendTurn();
       return;
     }
-    const t = this.targets[this.targetIndex];
-    if (!t || t.enemy.dead) {
+    if (!t || t.enemy.dead || !wound) {
       this.spendTurn();
       return;
     }
     let dealt: number;
-    const wound = t.part.node.getWorldPosition(new THREE.Vector3());
     if (this.pendingCrit === 'weak') {
       dealt = t.enemy.takeHit(s.gunDamage * 6, null); // crit ignores overrides
       this.onMessage?.(`CRITICAL — ${dealt} damage!`);
@@ -787,13 +818,15 @@ export class BattleSystem {
     const s = this.state;
     const rounds = s.ammoInClip;
     s.ammoInClip = 0;
-    this.onShot?.();
     const t = this.targets[this.targetIndex];
-    if (!t || t.enemy.dead || rounds <= 0) {
+    const wound = t && !t.enemy.dead
+      ? t.part.node.getWorldPosition(new THREE.Vector3())
+      : undefined;
+    this.onShot?.(wound);
+    if (!t || t.enemy.dead || rounds <= 0 || !wound) {
       this.spendTurn();
       return;
     }
-    const wound = t.part.node.getWorldPosition(new THREE.Vector3());
     let hits = 0;
     let total = 0;
     for (let i = 0; i < rounds; i++) {
@@ -829,7 +862,7 @@ export class BattleSystem {
     if (this.phase === 'won') return;
     if (this.enemiesAlive.length === 0 && this.enemies.length > 0) {
       this.phase = 'won';
-      this.victoryTimer = 1.4;
+      this.victoryTimer = 2.1; // outlasts the last corpse's sink
       const xp = this.enemies.reduce((sum, e) => sum + e.maxHp, 0);
       const ups = this.state.addXp(xp);
       this.onMessage?.(`Clear. +${xp} XP.`);

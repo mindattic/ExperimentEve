@@ -321,16 +321,23 @@ battle.onMessage = (t) => hud.message(t);
 battle.onAtbReady = () => sfx.atbReady();
 battle.onSever = (pos) => {
   hitStop = 0.14;
+  cameraMgr.addShake(0.45);
   sfx.chop();
   particles.burst(pos, {
     count: 22, color: 0xb84a3a, colorEnd: 0x30100c,
     speed: 4, life: 0.55, size: 0.1, gravity: 7,
   });
+  particles.stain(pos.x, pos.z, 0.4, player.floorY);
 };
 const dmgNumbers = new DamageNumbers(hudEl);
 battle.onDamage = (pos, amount, crit) => {
   dmgNumbers.spawn(pos, amount, crit);
   hitStop = crit ? 0.12 : 0.06;
+  cameraMgr.addShake(crit ? 0.32 : 0.1);
+  if (crit) {
+    impactTimer = 0.09;
+    impactLight.position.copy(pos);
+  }
   // The wound itself: dark spray, brighter and bigger on a crit.
   particles.burst(pos, {
     count: crit ? 16 : 9,
@@ -341,6 +348,19 @@ battle.onDamage = (pos, amount, crit) => {
     size: 0.07,
     gravity: 7,
   });
+};
+// The kill: every damage path funnels here. Gore, a pool on the asphalt,
+// a bite of hit-stop — and the last kill of the fight bites hardest.
+battle.onKill = (e, wasLast) => {
+  const pos = e.object.position;
+  hitStop = wasLast ? 0.3 : 0.16;
+  cameraMgr.addShake(wasLast ? 0.55 : 0.4);
+  input.rumble(wasLast ? 260 : 160, 0.6, 1);
+  particles.burst(pos.clone().add(new THREE.Vector3(0, 0.9, 0)), {
+    count: 26, color: 0xb84a3a, colorEnd: 0x2a0d0a,
+    speed: 4.5, life: 0.6, size: 0.1, gravity: 8,
+  });
+  particles.stain(pos.x, pos.z, Math.min(1.1, 0.45 + e.radius * 0.6), player.floorY);
 };
 battle.hasAxe = () => inventory.count('fireAxe') > 0;
 battle.inv = inventory;
@@ -364,7 +384,11 @@ window.addEventListener('pointerdown', unlockAudio);
 const muzzleLight = new THREE.PointLight(0xffcc88, 0, 6);
 scene.add(muzzleLight);
 let muzzleTimer = 0;
-battle.onShot = () => {
+// Crit impact flash: a hot pop of light at the wound itself.
+const impactLight = new THREE.PointLight(0xff8855, 0, 7);
+scene.add(impactLight);
+let impactTimer = 0;
+battle.onShot = (wound) => {
   muzzleTimer = 0.07;
   const muzzle = player.position.clone().add(new THREE.Vector3(Math.sin(player.facing) * 0.35, 1.32, Math.cos(player.facing) * 0.35));
   muzzleLight.position.copy(muzzle);
@@ -379,6 +403,20 @@ battle.onShot = () => {
     size: 0.08,
     gravity: 0,
   });
+  if (wound) particles.tracer(muzzle, wound);
+  // Brass: one casing arcs off her right shoulder and drops.
+  particles.burst(muzzle, {
+    count: 1,
+    color: 0xd8b26a,
+    speed: 2.2,
+    spread: 0.3,
+    dir: new THREE.Vector3(Math.cos(player.facing), 1.4, -Math.sin(player.facing)),
+    life: 0.8,
+    size: 0.05,
+    gravity: 9,
+  });
+  rig.kick();
+  cameraMgr.addShake(0.16);
   input.rumble(120, 0.4, 0.8);
   sfx.gunshot();
   rollCatAllies();
@@ -1321,6 +1359,8 @@ function frame(): void {
   }
 
   rig.pose = battle.phase === 'fire' ? 'aim' : 'explore';
+  // Below ~a third health she visibly carries the damage.
+  rig.hurtK = Math.max(0, 1 - state.hp / (state.maxHp * 0.35));
   const moving = moveDir !== null && !player.locked;
   rig.update(gameDt, moving && !player.riding ? sample.magnitude : 0, player.dodgeProgress);
 
@@ -1337,6 +1377,8 @@ function frame(): void {
   // Hurt feedback (any source).
   if (state.hp < lastHp - 0.01) {
     sfx.hurt();
+    rig.flinch();
+    cameraMgr.addShake(0.42);
     input.rumble(200, 0.6, 1);
   }
   lastHp = state.hp;
@@ -1501,6 +1543,10 @@ function frame(): void {
   if (muzzleTimer > 0) {
     muzzleTimer -= realDt;
     muzzleLight.intensity = muzzleTimer > 0 ? 3 : 0;
+  }
+  if (impactTimer > 0) {
+    impactTimer -= realDt;
+    impactLight.intensity = impactTimer > 0 ? 4 : 0;
   }
 
   subtitles.update(realDt);
