@@ -757,6 +757,20 @@ worldAI.addWanderer({ species: 'ratGull', x: 8, z: 35, region: { minX: -13, minZ
 worldAI.addWanderer({ species: 'tentacleDoberman', x: 0, z: -14, region: { minX: -3, minZ: -16, maxX: 3, maxZ: -1 } });
 // A hush fox haunts the CCTV cross street (it shows plainly on the lens).
 worldAI.addWanderer({ species: 'hushFox', x: 10, z: 3, region: { minX: -13, minZ: 0.5, maxX: 13, maxZ: 5.5 } });
+// The Afflicted wander the streets — the neighbors, what's left of them.
+{
+  const spots: [string, number, number, { minX: number; minZ: number; maxX: number; maxZ: number }][] = [
+    ['flailfish', -2, 10, { minX: -3.5, minZ: 7, maxX: 3.5, maxZ: 15 }],
+    ['owlneighbor', 2, 26, { minX: -3.5, minZ: 21, maxX: 3.5, maxZ: 29 }],
+    ['crabwife', -8, 3.5, { minX: -13, minZ: 1, maxX: -5, maxZ: 5.5 }],
+    ['carpsire', 8, 2, { minX: 5, minZ: 0.5, maxX: 13, maxZ: 5 }],
+    ['houndfather', 0, -12, { minX: -3.5, minZ: -16, maxX: 3.5, maxZ: -2 }],
+  ];
+  for (const [species, x, z, region] of spots) {
+    worldAI.addWanderer({ species, x, z, region, packId: 'afflicted-street' });
+  }
+}
+
 // Crow-spider nest in a backyard keeps juveniles trickling into street A.
 worldAI.addNest({ species: 'crowSpider', x: -12.5, z: 17, capacity: 2, intervalSec: 45, region: { minX: -13, minZ: 7, maxX: 3, maxZ: 28 } });
 worldAI.addRats(7, 0, 32, 16);
@@ -767,6 +781,8 @@ worldAI.onVocal = (species) => {
     case 'tentacleDoberman': sfx.bark(); break;
     case 'crowSpider': sfx.wingFlutter(); break;
     case 'frog': sfx.croak(); break;
+    case 'gullscream': sfx.hiss(); sfx.bark(); break;
+    case 'flailfish': case 'carpsire': sfx.dodgeRoll(); break; // wet slap
     default: sfx.hiss();
   }
 };

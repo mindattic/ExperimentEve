@@ -19,6 +19,26 @@ import { DartSquirrel } from './dartSquirrels';
 import { LureHeron } from './lureHeron';
 import { HiveBear } from './hiveBear';
 import { BulwarkMoose } from './bulwarkMoose';
+import { Flailfish } from './afflicted/flailfish';
+import { Crabwife } from './afflicted/crabwife';
+import { Gullscream } from './afflicted/gullscream';
+import { Mothmother } from './afflicted/mothmother';
+import { Houndfather } from './afflicted/houndfather';
+import { Eelneck } from './afflicted/eelneck';
+import { Owlneighbor } from './afflicted/owlneighbor';
+import { Pigeonchest } from './afflicted/pigeonchest';
+import { Mantisbride } from './afflicted/mantisbride';
+import { Snailson } from './afflicted/snailson';
+import { Serpentwaist } from './afflicted/serpentwaist';
+import { Gantrylegs } from './afflicted/gantrylegs';
+import { Barnacledad } from './afflicted/barnacledad';
+import { Ratchoir } from './afflicted/ratchoir';
+import { Anglerwidow } from './afflicted/anglerwidow';
+import { Togglecrab } from './afflicted/togglecrab';
+import { Jellyuncle } from './afflicted/jellyuncle';
+import { Woodpeckerclerk } from './afflicted/woodpeckerclerk';
+import { Tortoisenana } from './afflicted/tortoisenana';
+import { Carpsire } from './afflicted/carpsire';
 
 // String-keyed species registry: level data and the A-Life sim spawn by id,
 // and expansion districts can register new species without touching core.
@@ -45,7 +65,36 @@ export const ENEMY_REGISTRY: Record<string, () => Enemy> = {
   lureHeron: () => new LureHeron(),
   hiveBear: () => new HiveBear(),
   bulwarkMoose: () => new BulwarkMoose(),
+  // The Afflicted — the human chimeras, the zombie tier.
+  flailfish: () => new Flailfish(),
+  crabwife: () => new Crabwife(),
+  gullscream: () => new Gullscream(),
+  mothmother: () => new Mothmother(),
+  houndfather: () => new Houndfather(),
+  eelneck: () => new Eelneck(),
+  owlneighbor: () => new Owlneighbor(),
+  pigeonchest: () => new Pigeonchest(),
+  mantisbride: () => new Mantisbride(),
+  snailson: () => new Snailson(),
+  serpentwaist: () => new Serpentwaist(),
+  gantrylegs: () => new Gantrylegs(),
+  barnacledad: () => new Barnacledad(),
+  ratchoir: () => new Ratchoir(),
+  anglerwidow: () => new Anglerwidow(),
+  togglecrab: () => new Togglecrab(),
+  jellyuncle: () => new Jellyuncle(),
+  woodpeckerclerk: () => new Woodpeckerclerk(),
+  tortoisenana: () => new Tortoisenana(),
+  carpsire: () => new Carpsire(),
 };
+
+/** The zombie-tier species ids, for random street spawns. */
+export const AFFLICTED_SPECIES = [
+  'flailfish', 'crabwife', 'gullscream', 'mothmother', 'houndfather',
+  'eelneck', 'owlneighbor', 'pigeonchest', 'mantisbride', 'snailson',
+  'serpentwaist', 'gantrylegs', 'barnacledad', 'ratchoir', 'anglerwidow',
+  'togglecrab', 'jellyuncle', 'woodpeckerclerk', 'tortoisenana', 'carpsire',
+];
 
 export function spawnEnemy(speciesId: string): Enemy | null {
   const factory = ENEMY_REGISTRY[speciesId];
