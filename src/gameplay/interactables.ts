@@ -61,7 +61,7 @@ const LOOT: Record<string, LootRoll[]> = {
 
 export type InteractKind =
   | 'container' | 'salvage' | 'inspect' | 'save' | 'pickup' | 'trade' | 'alarm' | 'chop' | 'bike'
-  | 'ladder';
+  | 'ladder' | 'locked';
 
 export type SalvageType = 'car' | 'couch' | 'trashPile' | 'bentBike' | 'semi';
 
@@ -121,6 +121,8 @@ export interface InteractableDef {
   floorY?: number;
   /** ladder: where the climb ends [x, z, floorY]. */
   ladderTo?: [number, number, number];
+  /** locked: pick difficulty; on success behaves like grants/container. */
+  lockDifficulty?: 'easy' | 'hard';
   once?: boolean;
 }
 

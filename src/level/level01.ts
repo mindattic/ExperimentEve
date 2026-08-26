@@ -223,6 +223,8 @@ export const LEVEL01: LevelDef = {
     { min: [-5, 22.7], max: [-4.4, 23.3], h: 0.75, color: 0x6a6258 }, // phone table + answering machine
     { min: [-8, 23.2], max: [-7.2, 24.4], h: 2.1, color: 0x5a4c40 }, // bedroom closet
     { min: [-12.1, 21.1], max: [-11.4, 21.9], h: 0.9, color: 0x2e3236 }, // backyard grill
+    { min: [-10.95, 24.2], max: [-10.45, 25], h: 1.8, color: 0x4a4238 }, // gun cabinet
+    { min: [26.7, -5.6], max: [27.3, -5], h: 0.5, color: 0x3a4048 }, // strongbox
 
     // South street trash.
     { min: [3.1, -4.4], max: [3.9, -3.6], h: 1, color: 0x4e565c },
@@ -274,6 +276,18 @@ export const LEVEL01: LevelDef = {
     { id: 'nightstand1', x: -10.3, z: 26, prompt: 'Search the nightstand', kind: 'container', roomType: 'bedroom', containerType: 'nightstand' },
     { id: 'dresser1', x: -7.7, z: 26.1, prompt: 'Search the dresser', kind: 'container', roomType: 'bedroom', containerType: 'dresser' },
     { id: 'closet1', x: -7.9, z: 23.8, prompt: 'Search the closet', kind: 'container', roomType: 'bedroom', containerType: 'closet' },
+    {
+      id: 'gunCabinet', x: -10.7, z: 24.6, prompt: 'A locked gun cabinet', kind: 'locked',
+      lockDifficulty: 'easy',
+      inspectText: 'The cabinet opens. Boxed rounds, kept the way careful people keep them.',
+      grants: [{ item: 'ammo9', n: 12 }],
+    },
+    {
+      id: 'strongbox', x: 27, z: -5.3, prompt: 'A strongbox, bolted to the floor', kind: 'locked',
+      lockDifficulty: 'hard',
+      inspectText: 'The strongbox gives. Payroll baubles — and the shop\'s spare lighter.',
+      grants: [{ item: 'pocketWatch', n: 1 }, { item: 'ring', n: 1 }, { item: 'lighter', n: 1 }],
+    },
     { id: 'bathcab1', x: -10.4, z: 20.2, prompt: 'Search the medicine cabinet', kind: 'container', roomType: 'bathroom', containerType: 'cabinet' },
     { id: 'tub-house1', x: -8.7, z: 20.5, prompt: 'Draw a bath', kind: 'inspect', once: false },
     { id: 'shelf1', x: -5.1, z: 26.2, prompt: 'Search the shelf', kind: 'container', roomType: 'living', containerType: 'shelf' },

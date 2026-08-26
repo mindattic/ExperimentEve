@@ -12,6 +12,7 @@ import { GameState } from './gameplay/gameState';
 import { Inventory } from './gameplay/inventory';
 import { rollLoot, rollSalvage, type Interactable } from './gameplay/interactables';
 import { PawnMenu } from './ui/pawnMenu';
+import { LockpickGame } from './ui/lockpick';
 import { ITEMS } from './gameplay/inventory';
 import { BattleSystem } from './battle/battle';
 import { FrogChimera } from './enemies/frogBoss';
@@ -235,6 +236,26 @@ const invMenu = new InventoryMenu(hudEl);
 invMenu.onMessage = (t) => hud.message(t);
 const statMenu = new StatMenu(hudEl);
 const pawnMenu = new PawnMenu(hudEl);
+const lockpick = new LockpickGame(hudEl);
+let lockTarget: Interactable | null = null;
+lockpick.onCreak = () => sfx.pickCreak();
+lockpick.onResult = (r) => {
+  const target = lockTarget;
+  lockTarget = null;
+  if (r === 'opened' && target) {
+    sfx.unlockClunk();
+    target.used = true;
+    for (const g of target.grants ?? []) inventory.add(g.item, g.n);
+    hud.message(target.inspectText ?? 'It opens.');
+    sfx.pickup();
+    state.addLimit(8);
+  } else if (r === 'broke') {
+    inventory.remove('bobbyPin');
+    sfx.pickBreak();
+    hud.message(`The pin snaps. ${inventory.count('bobbyPin')} left.`);
+  }
+  // cancelled: no cost — she just steps away.
+};
 
 // The garage save point: a CRT running ApertureOS 98.
 const os = new ApertureOS(hudEl);
@@ -595,6 +616,16 @@ function handleInteract(i: Interactable): void {
       if (i.ladderTo) startClimb(i.ladderTo);
       break;
     }
+    case 'locked': {
+      if (inventory.count('bobbyPin') <= 0) {
+        hud.message('Locked. A bobby pin would do it — bend some scrap, or check a nightstand.');
+        break;
+      }
+      lockTarget = i;
+      lockpick.start(i.lockDifficulty ?? 'easy');
+      subtitles.say('Eyes down. Ears up.');
+      break;
+    }
     case 'save': {
       if (!state.flags['lampSeen']) {
         state.flags['lampSeen'] = true;
@@ -859,7 +890,7 @@ if (sessionStorage.getItem('eve-auto-continue') === '1' && hasSave()) {
 }
 
 // Dev console handle (also used by automated drive tests).
-(window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player, worldAI, scene };
+(window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player, worldAI, scene, lockpick };
 
 function frame(): void {
   const menuOpen = invMenu.open || statMenu.open || os.open || pawnMenu.open;
@@ -881,6 +912,22 @@ function frame(): void {
   cameraMgr.update(player.position.x, player.position.z, realDt);
   pipeline.setDistortion(cameraMgr.activeZone?.fisheye ?? 0);
   const moveDir = latch.update(sample, cameraMgr.activeZone);
+
+  // Lockpicking runs in REAL TIME — the street stays live behind her.
+  if (lockpick.open) {
+    if (!chiming) lockpick.update(sample, realDt);
+    player.locked = true;
+    latch.reset();
+    // Getting hit (or pulled into battle) mid-pick snaps the pin.
+    if (state.hp < lastHp - 0.01 || battle.active) {
+      lockpick.close();
+      lockTarget = null;
+      inventory.remove('bobbyPin');
+      sfx.pickBreak();
+      hud.message('The pin snaps in the lock—');
+      subtitles.say('Company.');
+    }
+  }
 
   // Menus (pause the world).
   if (os.open) {
@@ -913,12 +960,12 @@ function frame(): void {
     }
   };
   if (battle.active) {
-    player.locked = !battle.playerControlled || menuOpen || chiming || climb !== null;
+    player.locked = !battle.playerControlled || menuOpen || chiming || climb !== null || lockpick.open;
     if (battle.playerControlled && !menuOpen && !chiming && sample.dodgeJust) tryDodge();
     battle.update(realDt, gameDt, sample, player, cameraMgr.camera, colliders);
   } else {
-    player.locked = menuOpen || chiming || climb !== null;
-    if (!menuOpen && !chiming && !climb && sample.dodgeJust) tryDodge();
+    player.locked = menuOpen || chiming || climb !== null || lockpick.open;
+    if (!menuOpen && !chiming && !climb && !lockpick.open && sample.dodgeJust) tryDodge();
     for (const t of level.triggers) {
       if (!t.fired && triggerContains(t, player.position.x, player.position.z)) {
         t.fired = true;
@@ -988,7 +1035,7 @@ function frame(): void {
 
   // Interact / execution prompt. Riding: interact = get off, wherever —
   // and the same key-edge must not immediately remount the dropped bike.
-  let interactConsumed = false;
+  let interactConsumed = lockpick.open; // picking eats the interact key
   if (player.riding && !menuOpen && sample.interactJust) {
     const bikeI = level.interactables.find((x) => x.id === 'bike1');
     if (bikeI) {

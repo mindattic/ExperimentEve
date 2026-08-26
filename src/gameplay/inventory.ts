@@ -2,7 +2,7 @@ export type ItemId =
   // components
   | 'bottle' | 'rag' | 'alcohol' | 'sprayCan' | 'lighter' | 'scrap'
   // tools/weapons
-  | 'fireAxe'
+  | 'fireAxe' | 'bobbyPin'
   // crafted
   | 'bandage' | 'molotov' | 'flamethrower'
   // consumables / ammo
@@ -53,6 +53,10 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   fireAxe: {
     id: 'fireAxe', name: 'Fire Axe', category: 'crafted',
     desc: 'IN CASE OF EMERGENCY, BREAK GLASS. Somebody finally agreed this counts.',
+  },
+  bobbyPin: {
+    id: 'bobbyPin', name: 'Bobby Pin', category: 'crafted',
+    desc: 'Bent just so. Every locked thing in this town is somebody\'s last drawer. It opens anyway.',
   },
   bandage: {
     id: 'bandage', name: 'Bandage', category: 'consumable',
@@ -130,6 +134,8 @@ export interface Recipe {
   line: string;
   /** Needs a found blueprint before it can be crafted (a-ha drip). */
   needsBlueprint?: boolean;
+  /** Extra copies of the output beyond the first. */
+  bonusCount?: number;
 }
 
 // RE-style combine. Lighter survives the flamethrower build conceptually but
@@ -150,6 +156,12 @@ export const RECIPES: Recipe[] = [
     inputs: ['rag', 'alcohol'],
     output: 'bandage',
     line: 'Clean-ish rag, alcohol. Field medicine.',
+  },
+  {
+    inputs: ['scrap'],
+    output: 'bobbyPin',
+    line: 'A little wire, a little bend. Two pins, actually.',
+    bonusCount: 1, // scrap yields 2 pins
   },
 ];
 
@@ -190,7 +202,7 @@ export class Inventory {
         if (r.needsBlueprint && !this.blueprints.has(r.output)) return 'locked';
         if (!need.every((id) => this.count(id) > 0)) return null;
         for (const id of need) this.remove(id);
-        this.add(r.output);
+        this.add(r.output, 1 + (r.bonusCount ?? 0));
         return r;
       }
     }

@@ -70,6 +70,23 @@ export class Sfx {
     this.a.tone({ from: 1200, duration: 0.03, type: 'square', gain: 0.08 });
   }
 
+  /** Lockpicking: tumbler creak under stress. */
+  pickCreak(): void {
+    this.a.tone({ from: 320 + Math.random() * 120, to: 260, duration: 0.06, type: 'sawtooth', gain: 0.08 });
+  }
+
+  /** Lockpicking: the pin snaps. */
+  pickBreak(): void {
+    this.a.tone({ from: 1400, to: 700, duration: 0.05, type: 'square', gain: 0.2 });
+    this.a.noiseBurst({ duration: 0.05, filterFrom: 2600, gain: 0.2 });
+  }
+
+  /** Lockpicking: the plug turns over. */
+  unlockClunk(): void {
+    this.a.tone({ from: 180, to: 120, duration: 0.12, type: 'square', gain: 0.3 });
+    this.a.noiseBurst({ duration: 0.07, filterFrom: 900, filterTo: 300, gain: 0.25 });
+  }
+
   /** 1998 payphone: two-burst mechanical bell ring. */
   phoneRing(): void {
     for (const delay of [0, 90, 180, 270]) {
