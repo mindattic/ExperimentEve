@@ -737,6 +737,38 @@ function handleInteract(i: Interactable): void {
         state.addLimit(10);
         break;
       }
+      if (i.id === 'boombox1') {
+        // The roof camper's boombox. The CD-R does the classic '90s thing:
+        // ten real tracks, a desert of blanks, and a secret at 99.
+        if (inventory.count('cdBurned') <= 0) {
+          hud.message('A boombox, D-batteries still good. The tray is open and empty.');
+          subtitles.say('Somebody camped up here with a soundtrack.');
+          break;
+        }
+        if (!state.flags['bbTracks']) {
+          state.flags['bbTracks'] = true;
+          sfx.saveChime();
+          worldClock.elapsed += 4 * 60; // she lets it play
+          hud.message('The CD-R plays. Tracks 1–10 — somebody\'s summer, in order.');
+          subtitles.say('[track 3 is a slow one. She lets it finish.]', 3.2);
+        } else if (!state.flags['bbBlanks']) {
+          state.flags['bbBlanks'] = true;
+          sfx.uiBlip();
+          worldClock.elapsed += 2 * 60;
+          hud.message('Track 11: silence. 12: silence. She holds SKIP — 88 blank tracks whir by.');
+          subtitles.say('The counter just keeps going. Why would it keep going?', 3.2);
+        } else if (!state.flags['bbBonus']) {
+          state.flags['bbBonus'] = true;
+          sfx.phoneRing();
+          state.addLimit(100);
+          hud.message('TRACK 99 — after all that silence, a voice reading numbers over a dial tone.');
+          subtitles.say('[she copies the numbers onto her arm]', 3);
+          subtitles.say('Hidden track. Everyone did it in \'98. Nobody did THIS.', 3.4);
+        } else {
+          hud.message('The disc spins down. 74 minutes. 650 megabytes. One secret.');
+        }
+        break;
+      }
       if (i.id === 'ansMachine1') {
         if (!state.flags['ansHeard1']) {
           state.flags['ansHeard1'] = true;
@@ -846,6 +878,29 @@ function handleInteract(i: Interactable): void {
       if (!state.flags['lampSeen']) {
         state.flags['lampSeen'] = true;
         subtitles.say('A lighthouse lamp. And a computer that still has power.');
+      }
+      // The BACKUP disc mounts on the garage machine — 650 MB of somebody's
+      // diligence lands in the file browser.
+      if (inventory.count('cdRom650') > 0 && !state.flags['cdMounted']) {
+        state.flags['cdMounted'] = true;
+        sfx.uiConfirm();
+        hud.message('The tray takes the disc. D:\\ mounted — 650 MB, mostly used.');
+        subtitles.say('Okay, M. Show me what was worth backing up.');
+        garageMachine.files.push(
+          {
+            name: 'D_tow_ledger_jun98.txt',
+            body: 'TOWS - JUNE 1998\n6/02 sedan, Elm - lot\n6/05 wagon, Pier Rd - lot\n6/09 van, Spring St - WATER TREATMENT PLANT (county order)\n6/12 pickup - PLANT\n6/15 two sedans - PLANT\n6/18 anything that rolls - PLANT\nNote: county pays double and asks for the catalytic OFF. Why.',
+          },
+          {
+            name: 'D_invoice_draft.txt',
+            body: 'TO: APERTURE SYSTEMS, FACILITIES DIV.\nRE: flatbed services, water treatment plant, June\n14 trips @ $80 ... $1,120\nNOTE: your gate crew loads at night and signs with initials only.\nNOTE: the crates hum. Charging extra for the crates that hum.\n(draft - unsent)',
+          },
+          {
+            name: 'D_for_whoever.txt',
+            body: 'If you are reading this it means you found the backup.\nThe plant is not treating water. Water does not need guards.\nRay knows the dock schedule. Ray is not back.\nKeep the lamp lit.\n- M.',
+            deleted: true,
+          },
+        );
       }
       os.boot(garageMachine);
       break;

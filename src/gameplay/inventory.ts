@@ -21,6 +21,8 @@ export type ItemId =
   | 'partBarrel' | 'partMag' | 'partAction' | 'partGrip'
   // skill tapes: watch them on a TV/VCR combo to learn what they teach
   | 'tapeOpenHand' | 'tapeCarpetBurn'
+  // compact discs: audio for the boombox, data for a machine with a tray
+  | 'cdBurned' | 'cdRom650'
   // keepsakes: cannot be sold, spent, or lost
   | 'katsCard';
 
@@ -210,6 +212,14 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'denimPants', name: 'Denim Pants', category: 'gear', slot: 'legs', armor: 0.08,
     desc: 'Stonewashed, bootcut, indestructible. The 90s built two things to last and this is both of them.',
     equipLine: 'These are somebody\'s good jeans.',
+  },
+  cdBurned: {
+    id: 'cdBurned', name: 'Unlabeled CD-R', category: 'tape',
+    desc: '120mm, 74 minutes, burned at somebody\'s desk. Ten tracks listed in marker. The listing stops at ten. The disc does not.',
+  },
+  cdRom650: {
+    id: 'cdRom650', name: 'BACKUP — DO NOT ERASE (CD-ROM)', category: 'tape',
+    desc: '650 megabytes, pressed with intent. Whatever was worth keeping in Kingsport fits on one disc. Needs a machine with a tray.',
   },
   tapeOpenHand: {
     id: 'tapeOpenHand', name: 'PATHS OF THE OPEN HAND (VHS)', category: 'tape',

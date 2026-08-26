@@ -252,6 +252,7 @@ export const LEVEL01: LevelDef = {
     { min: [27.8, -0.2], max: [30, 0.9], h: 1, color: 0x5a5248 }, // workbench
     { min: [19, 0.6], max: [19.9, 1.5], h: 0.9, color: 0x4a5560 }, // lamp pedestal
     { min: [18.2, -4.6], max: [18.5, -3.8], h: 0.6, y: 1, color: 0x8a2020, noCollide: true }, // axe case
+    { min: [8.3, 8.9], max: [8.95, 9.3], h: 0.3, y: 3.65, color: 0x30343c, noCollide: true }, // boombox at the roof camp
 
     // Salvage props: dead cars (City Pack meshes), a curb couch.
     { min: [-1, 1.4], max: [1.2, 3.4], h: 1.15, hidden: true }, // dead sedan, cross street
@@ -363,6 +364,17 @@ export const LEVEL01: LevelDef = {
       id: 'roofStash', x: 8.2, z: 8.6, floorY: 3.65, prompt: 'Open the tar-paper bundle', kind: 'pickup',
       inspectText: 'Somebody slept up here, above it all. Rounds, a first-aid kit, and a pearl necklace in a sock.',
       grants: [{ item: 'ammo9', n: 6 }, { item: 'medkit', n: 1 }, { item: 'pearlNecklace', n: 1 }],
+    },
+    { id: 'boombox1', x: 8.6, z: 9, floorY: 3.65, prompt: 'The boombox', kind: 'inspect', once: false },
+    {
+      id: 'cdSpindle', x: -4.7, z: 25.4, prompt: 'Check the CD spindle', kind: 'pickup',
+      inspectText: 'A spindle of burned CD-Rs by the stereo. All copies of the same one. She takes the top disc.',
+      grants: [{ item: 'cdBurned', n: 1 }],
+    },
+    {
+      id: 'cdRomCase', x: 27.6, z: 1.2, prompt: 'Take the jewel case', kind: 'pickup',
+      inspectText: 'A jewel case on the workbench: BACKUP — DO NOT ERASE, in the same hand as the shift log. 650 megabytes of somebody\'s diligence.',
+      grants: [{ item: 'cdRom650', n: 1 }],
     },
     {
       id: 'roofView', x: 7, z: 7, floorY: 3.65, prompt: 'Look north, over the water', kind: 'inspect', once: false,
