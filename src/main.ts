@@ -29,6 +29,7 @@ import { LEVEL01 } from './level/level01';
 import { buildProtestField } from './level/props/protestField';
 import { GraffitiWall } from './level/props/graffiti';
 import { buildHouse, buildStorefront, buildStreetLamp } from './level/props/facades';
+import { placeModels } from './level/props/modelLoader';
 import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
 import { WorldAI } from './enemies/worldAI';
@@ -113,6 +114,34 @@ scene.add(duelWall.mesh);
   pawn.position.set(9, 0, 8);
   scene.add(pawn);
 }
+
+// CC0 set dressing (Kenney Retro Urban Kit) through the PS1 pipeline.
+placeModels(scene, [
+  // The jackknifed semi: cab and cargo at broken angles under the pylons.
+  { name: 'truck-flat', x: -4.6, z: -23.4, ry: 2.35, scale: 3.2 },
+  { name: 'truck-grey-cargo', x: 1.4, z: -22.3, ry: 1.62, scale: 3.2 },
+  // Blockade approach barriers.
+  { name: 'detail-barrier-strong-damaged', x: -2.2, z: -17.6, ry: 0.15, scale: 2 },
+  { name: 'detail-barrier-type-a', x: 1.8, z: -17.7, ry: -0.1, scale: 2 },
+  // Street furniture.
+  { name: 'detail-dumpster-open', x: 3.1, z: 7.2, ry: Math.PI, scale: 2 },
+  { name: 'detail-dumpster-closed', x: -3.5, z: -2.4, ry: 0.2, scale: 2 },
+  { name: 'detail-light-traffic', x: 4.6, z: 6.4, ry: Math.PI, scale: 2 },
+  { name: 'detail-bench', x: -6.2, z: 30.6, ry: 0, scale: 2 },
+  // Salvage-yard clutter by the garage and corridors.
+  { name: 'pallet', x: 20.4, z: -3.2, ry: 0.4, scale: 2 },
+  { name: 'pallet-small', x: 21.3, z: -2.5, ry: 1.2, scale: 2 },
+  { name: 'planks', x: 24.8, z: -16.6, ry: 0.9, scale: 2 },
+  { name: 'scaffolding-structure', x: 5.1, z: 21.5, ry: -Math.PI / 2, scale: 2.4 },
+  // Overhead cables sagging across street A.
+  { name: 'detail-cables-type-a', x: 0, z: 12, ry: Math.PI / 2, scale: 2.6 },
+  { name: 'detail-cables-type-b', x: 0, z: 24, ry: Math.PI / 2, scale: 2.6 },
+  // Green where the grass patches are.
+  { name: 'tree-small', x: -12.2, z: 11, scale: 2.2 },
+  { name: 'tree-shrub', x: 12.4, z: 24.5, scale: 2 },
+  { name: 'tree-shrub', x: -12.8, z: 24, scale: 2.4 },
+  { name: 'wall-broken-type-a', x: -8.5, z: 6.15, ry: Math.PI, scale: 2 },
+]);
 
 // Street lamps: two sound ones and a dying one over the protest field.
 const flickerLamp = buildStreetLamp();
@@ -795,7 +824,7 @@ if (sessionStorage.getItem('eve-auto-continue') === '1' && hasSave()) {
 }
 
 // Dev console handle (also used by automated drive tests).
-(window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player, worldAI };
+(window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player, worldAI, scene };
 
 function frame(): void {
   const menuOpen = invMenu.open || statMenu.open || os.open || pawnMenu.open;

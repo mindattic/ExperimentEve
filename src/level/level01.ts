@@ -228,9 +228,9 @@ export const LEVEL01: LevelDef = {
     { min: [3.1, -4.4], max: [3.9, -3.6], h: 1, color: 0x4e565c },
     { min: [-3.9, -12.4], max: [-3.1, -11.6], h: 1, color: 0x4e565c },
 
-    // Jackknifed semi: cab + trailer at odd angles (offset AABBs), pylons.
-    { min: [-6.5, -25], max: [-3, -22], h: 2.6, color: 0x6a2f28 }, // cab
-    { min: [-3, -23.4], max: [6, -21.2], h: 2.9, color: 0x7d8288 }, // trailer
+    // Jackknifed semi: colliders only (Kenney trucks supply the visuals).
+    { min: [-6.5, -25], max: [-3, -22], h: 2.6, hidden: true }, // cab
+    { min: [-3, -23.4], max: [6, -21.2], h: 2.9, hidden: true }, // trailer
     { min: [-12, -26], max: [-10, -23.5], h: 9, color: 0x707478 }, // bridge pylon
     { min: [-9, -26], max: [-7, -24], h: 9, color: 0x686c70 }, // bridge pylon
 
