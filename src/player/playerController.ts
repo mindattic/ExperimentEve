@@ -12,6 +12,8 @@ export class PlayerController {
   facing = 0;
   runSpeed = 4.0;
   turnRate = 12; // rad/s toward the move direction
+  /** Bicycle: much faster, wide turns, momentum. */
+  riding = false;
 
   private readonly vel = new THREE.Vector3();
   private readonly dodgeDir = new THREE.Vector3();
@@ -61,13 +63,21 @@ export class PlayerController {
       return;
     }
     if (this.locked) moveDir = null;
+    const speedMul = this.riding ? 2.05 : 1;
+    const turn = this.riding ? 3.6 : this.turnRate;
     if (moveDir) {
-      const speed = this.runSpeed * magnitude;
-      this.vel.set(moveDir.x * speed, 0, moveDir.z * speed);
+      const speed = this.runSpeed * speedMul * magnitude;
+      if (this.riding) {
+        // Momentum: velocity chases the input instead of snapping to it.
+        const target = new THREE.Vector3(moveDir.x * speed, 0, moveDir.z * speed);
+        this.vel.lerp(target, Math.min(1, dt * 2.2));
+      } else {
+        this.vel.set(moveDir.x * speed, 0, moveDir.z * speed);
+      }
       const targetFacing = Math.atan2(moveDir.x, moveDir.z);
-      this.facing = turnToward(this.facing, targetFacing, this.turnRate * dt);
+      this.facing = turnToward(this.facing, targetFacing, turn * dt);
     } else {
-      this.vel.multiplyScalar(Math.max(0, 1 - dt * 20)); // quick decel
+      this.vel.multiplyScalar(Math.max(0, 1 - dt * (this.riding ? 1.2 : 20))); // bikes coast
       if (this.vel.lengthSq() < 1e-4) this.vel.set(0, 0, 0);
     }
     this.object.position.addScaledVector(this.vel, dt);

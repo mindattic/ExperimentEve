@@ -76,6 +76,15 @@ export class WorldAI {
   /** Set when a wanderer reaches the player: main starts a battle with them. */
   onPlayerContact: ((enemies: Enemy[]) => void) | null = null;
 
+  private readonly alarmPos = new THREE.Vector3();
+  private alarmTimer = 0;
+
+  /** Fire alarm pulled: every wanderer in earshot converges on the sound. */
+  ring(x: number, z: number, durationSec: number): void {
+    this.alarmPos.set(x, 0, z);
+    this.alarmTimer = durationSec;
+  }
+
   /** Dev/test visibility into the sim. */
   debugSnapshot(): { species: string; mode: WMode; hp: number; x: number; z: number; stage: number }[] {
     return this.wanderers.map((w) => ({
@@ -167,6 +176,7 @@ export class WorldAI {
 
   update(gameDt: number, playerPos: THREE.Vector3, colliders: readonly Collider[], playerInBattle: boolean): void {
     if (gameDt <= 0) return;
+    this.alarmTimer = Math.max(0, this.alarmTimer - gameDt);
 
     // Nests spawn juveniles up to capacity.
     for (const n of this.nests) {
@@ -248,6 +258,11 @@ export class WorldAI {
 
       switch (w.mode) {
         case 'wander': {
+          if (this.alarmTimer > 0 && pos.distanceTo(this.alarmPos) < 40) {
+            // The alarm owns everyone's ears. Regions don't matter right now.
+            this.stepToward(w, this.alarmPos, w.speed * 1.7, gameDt, colliders);
+            break;
+          }
           this.stepToward(w, w.target, w.speed, gameDt, colliders);
           if (pos.distanceTo(w.target) < 0.8 || w.modeTimer <= 0) this.pickWanderTarget(w);
           break;

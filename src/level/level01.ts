@@ -135,6 +135,8 @@ export const LEVEL01: LevelDef = {
     { a: [6, -30], b: [6, -26], tex: 'brick', h: 3 },
 
     // Garage (brick shell), door gap x[23,26] on the south wall.
+    // Boarded shortcut panel (axe-choppable) in the east alley fence line.
+    { a: [4, 18], b: [4, 19.2], tex: 'plank', h: 2.1, gated: 'chopped1' },
     { a: [18, -6], b: [23, -6], tex: 'brick', h: 3.4 },
     { a: [26, -6], b: [30, -6], tex: 'brick', h: 3.4 },
     { a: [18, -6], b: [18, 2], tex: 'brick', h: 3.4 },
@@ -148,7 +150,8 @@ export const LEVEL01: LevelDef = {
     { a: [-4, 16], b: [-4, 19] },
     { a: [-4, 27], b: [-4, 30] },
     { a: [4, 6], b: [4, 10] },
-    { a: [4, 17], b: [4, 20] },
+    { a: [4, 17], b: [4, 18] }, // boarded panel between these two stubs
+    { a: [4, 19.2], b: [4, 20] },
     { a: [4, 27], b: [4, 30] },
     // Cross street NE gap.
     { a: [4, 6], b: [6, 6] },
@@ -201,6 +204,15 @@ export const LEVEL01: LevelDef = {
     // Garage props.
     { min: [27.8, -0.2], max: [30, 0.9], h: 1, color: 0x5a5248 }, // workbench
     { min: [19, 0.6], max: [19.9, 1.5], h: 0.9, color: 0x4a5560 }, // lamp pedestal
+    { min: [18.2, -4.6], max: [18.5, -3.8], h: 0.6, y: 1, color: 0x8a2020, noCollide: true }, // axe case
+
+    // Salvage props: dead cars, a curb couch.
+    { min: [-1, 1.4], max: [1.2, 3.4], h: 1.15, color: 0x54383a }, // dead sedan, cross street
+    { min: [-2.6, -15.2], max: [-0.6, -13.4], h: 1.15, color: 0x3c4652 }, // dead wagon, south street
+    { min: [-6.6, 17.1], max: [-4.9, 17.9], h: 0.75, color: 0x6a4a52 }, // curb couch
+
+    // A bicycle leaning on the east fence of street A.
+    { min: [3.4, 23.6], max: [3.8, 24.6], h: 0.9, color: 0x8a4420, noCollide: true },
   ],
 
   ground: [
@@ -287,6 +299,21 @@ export const LEVEL01: LevelDef = {
       inspectText: 'HAPPY FATHER\'S DAY DAD — two crayon hands, two names. Waiting on his workbench. The flatbed never came back.',
     },
     { id: 'saveLamp', x: 19.9, z: 1, prompt: 'Rest at the lighthouse lamp', kind: 'save', once: false },
+    { id: 'pawnSlot', x: 10.8, z: 5.6, prompt: 'Trade at the mail slot', kind: 'trade', once: false },
+    {
+      id: 'axeCase', x: 18.7, z: -4.2, prompt: 'Break the glass', kind: 'pickup',
+      inspectText: 'IN CASE OF EMERGENCY, BREAK GLASS. She breaks the glass. The sound goes somewhere.',
+      grants: [{ item: 'fireAxe', n: 1 }],
+    },
+    { id: 'fireAlarm1', x: 7, z: 0.6, prompt: 'Pull the fire alarm', kind: 'alarm', once: true },
+    {
+      id: 'boards1', x: 4, z: 18.6, prompt: 'The boarded panel', kind: 'chop', once: false,
+      chopFlag: 'chopped1',
+    },
+    { id: 'car1', x: 0, z: 1.2, prompt: 'Salvage the dead sedan', kind: 'salvage', salvageType: 'car' },
+    { id: 'car2', x: -1.6, z: -13.2, prompt: 'Salvage the dead wagon', kind: 'salvage', salvageType: 'car' },
+    { id: 'couch1', x: -5.7, z: 17.5, prompt: 'Strip the curb couch', kind: 'salvage', salvageType: 'couch' },
+    { id: 'bike1', x: 3.4, z: 24.1, prompt: 'Take the bicycle', kind: 'bike', once: false },
   ],
 
   triggers: [

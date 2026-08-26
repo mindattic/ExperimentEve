@@ -10,7 +10,8 @@ import { PlayerController } from './player/playerController';
 import { PlayerRig } from './player/playerRig';
 import { GameState } from './gameplay/gameState';
 import { Inventory } from './gameplay/inventory';
-import { rollLoot, type Interactable } from './gameplay/interactables';
+import { rollLoot, rollSalvage, type Interactable } from './gameplay/interactables';
+import { PawnMenu } from './ui/pawnMenu';
 import { ITEMS } from './gameplay/inventory';
 import { BattleSystem } from './battle/battle';
 import { FrogChimera } from './enemies/frogBoss';
@@ -119,6 +120,7 @@ const subtitles = new Subtitles(hudEl);
 const invMenu = new InventoryMenu(hudEl);
 invMenu.onMessage = (t) => hud.message(t);
 const statMenu = new StatMenu(hudEl);
+const pawnMenu = new PawnMenu(hudEl);
 
 // The garage save point: a CRT running ApertureOS 98.
 const os = new ApertureOS(hudEl);
@@ -161,6 +163,8 @@ const garageMachine = {
 };
 const battle = new BattleSystem(state, scene, hudEl, canvas);
 battle.onMessage = (t) => hud.message(t);
+battle.hasAxe = () => inventory.count('fireAxe') > 0;
+pawnMenu.onMessage = (t) => hud.message(t);
 
 // Audio: everything synthesized; unlocked by the first user gesture.
 const audio = new AudioEngine();
@@ -208,6 +212,68 @@ let lastChimedHour = 19; // arrival at 20:00 chimes immediately — eight bells
 let lastStepIndex = 0;
 let lastHp = 80;
 let executionMark: ReturnType<ErasureSquad['executionCandidate']> = null;
+
+// ---- Bicycle: fast, wide turns, low durability, ram on dodge -----------
+const bikeMesh = new THREE.Group();
+{
+  const frameMat = new THREE.MeshLambertMaterial({ color: 0x8a4420 });
+  const wheelMat = new THREE.MeshLambertMaterial({ color: 0x222226 });
+  for (const wz of [-0.42, 0.42]) {
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 10), wheelMat);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(0, 0.3, wz);
+    bikeMesh.add(wheel);
+  }
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.85, 4), frameMat);
+  bar.rotation.x = Math.PI / 2;
+  bar.position.set(0, 0.55, 0);
+  bikeMesh.add(bar);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 4), frameMat);
+  handle.rotation.z = Math.PI / 2;
+  handle.position.set(0, 0.85, 0.42);
+  bikeMesh.add(handle);
+  bikeMesh.visible = false;
+  player.object.add(bikeMesh);
+}
+let bikeHits = 0;
+let ramTimer = 0;
+const rammed = new Set<unknown>();
+
+function toggleBike(i: Interactable): void {
+  if (player.riding) {
+    // Dismount: the bike leans wherever she leaves it.
+    player.riding = false;
+    bikeMesh.visible = false;
+    i.x = player.position.x + Math.sin(player.facing) * 0.5;
+    i.z = player.position.z + Math.cos(player.facing) * 0.5;
+    i.prompt = 'Take the bicycle';
+    hud.message('She leans the bike.');
+  } else if (bikeHits >= 3) {
+    hud.message('The frame is bent into a question mark. Salvage, maybe.');
+  } else {
+    player.riding = true;
+    bikeMesh.visible = true;
+    hud.message('Borrowed. Everything is borrowed now.');
+    if (!state.flags['bikeBark']) {
+      state.flags['bikeBark'] = true;
+      subtitles.say('No helmet. Live dangerously.');
+    }
+  }
+}
+
+function bendBike(i: Interactable | undefined): void {
+  player.riding = false;
+  bikeMesh.visible = false;
+  if (i) {
+    i.kind = 'salvage';
+    i.salvageType = 'bentBike';
+    i.prompt = 'Salvage the bent bicycle';
+    i.x = player.position.x;
+    i.z = player.position.z;
+  }
+  hud.message('The bike folds under her. It is done being a bike.');
+  subtitles.say('Fine. Walking. Walking is fine.');
+}
 function hourOf(minutes: number): number {
   return Math.floor(minutes / 60);
 }
@@ -308,6 +374,59 @@ function handleInteract(i: Interactable): void {
         hud.message(i.inspectText ?? '...');
         if (i.once) i.used = true;
       }
+      break;
+    }
+    case 'salvage': {
+      const parts = rollSalvage(i.salvageType ?? 'trashPile');
+      for (const p of parts) inventory.add(p.item, p.n);
+      hud.message(
+        parts.length
+          ? 'Stripped: ' + parts.map((p) => `${ITEMS[p.item].name}×${p.n}`).join(', ')
+          : 'Nothing worth taking.',
+      );
+      sfx.pickup();
+      i.used = true;
+      break;
+    }
+    case 'trade': {
+      if (!state.flags['pawnMet']) {
+        state.flags['pawnMet'] = true;
+        subtitles.say('A voice behind the bars: "Baubles only. Bullets back."');
+      }
+      pawnMenu.toggle();
+      break;
+    }
+    case 'alarm': {
+      i.used = true;
+      worldAI.ring(i.x, i.z, 30);
+      hud.message('The alarm howls. Everything with ears is coming HERE.');
+      subtitles.say('Okay. Now be somewhere else.');
+      let rings = 0;
+      const ringLoop = (): void => {
+        if (rings++ < 30) {
+          sfx.alarmClang();
+          window.setTimeout(ringLoop, 950);
+        }
+      };
+      ringLoop();
+      input.rumble(400, 0.3, 0.5);
+      break;
+    }
+    case 'chop': {
+      if (state.flags[i.chopFlag ?? '']) break;
+      if (inventory.count('fireAxe') > 0) {
+        state.flags[i.chopFlag ?? ''] = true;
+        i.used = true;
+        hud.message('The boards give way. A new way through.');
+        sfx.chop();
+        input.rumble(200, 0.6, 0.9);
+      } else {
+        hud.message('Boarded shut. An axe would have opinions about this.');
+      }
+      break;
+    }
+    case 'bike': {
+      toggleBike(i);
       break;
     }
     case 'save': {
@@ -545,7 +664,7 @@ if (sessionStorage.getItem('eve-auto-continue') === '1' && hasSave()) {
 (window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player, worldAI };
 
 function frame(): void {
-  const menuOpen = invMenu.open || statMenu.open || os.open;
+  const menuOpen = invMenu.open || statMenu.open || os.open || pawnMenu.open;
   const chiming = chime !== null;
   gameClock.timeScale = battle.wantsPause || menuOpen || chiming || mode !== 'game' ? 0 : 1;
   const { realDt, gameDt } = gameClock.tick();
@@ -570,6 +689,9 @@ function frame(): void {
     os.clockText = worldClock.timeString;
     os.update(sample);
     latch.reset();
+  } else if (pawnMenu.open) {
+    pawnMenu.update(sample, inventory, state);
+    latch.reset();
   } else if (statMenu.open) {
     statMenu.update(sample, state);
     latch.reset();
@@ -580,17 +702,25 @@ function frame(): void {
     invMenu.toggle();
   }
 
+  const tryDodge = (): void => {
+    if (player.dodge(moveDir)) {
+      sfx.dodgeRoll();
+      if (player.riding) {
+        // Bike ram: the dodge burst becomes a battering pass.
+        ramTimer = 0.35;
+        rammed.clear();
+        bikeHits++;
+        input.rumble(150, 0.5, 0.7);
+      }
+    }
+  };
   if (battle.active) {
     player.locked = !battle.playerControlled || menuOpen || chiming;
-    if (battle.playerControlled && !menuOpen && !chiming && sample.dodgeJust) {
-      if (player.dodge(moveDir)) sfx.dodgeRoll();
-    }
+    if (battle.playerControlled && !menuOpen && !chiming && sample.dodgeJust) tryDodge();
     battle.update(realDt, gameDt, sample, player, cameraMgr.camera, colliders);
   } else {
     player.locked = menuOpen || chiming;
-    if (!menuOpen && !chiming && sample.dodgeJust) {
-      if (player.dodge(moveDir)) sfx.dodgeRoll();
-    }
+    if (!menuOpen && !chiming && sample.dodgeJust) tryDodge();
     for (const t of level.triggers) {
       if (!t.fired && triggerContains(t, player.position.x, player.position.z)) {
         t.fired = true;
@@ -609,9 +739,32 @@ function frame(): void {
   worldAI.update(gameDt, player.position, colliders, battle.active);
   scares.update(gameDt);
   player.update(gameDt, moveDir, sample.magnitude, colliders);
+
+  // Bike ram resolution + durability.
+  if (ramTimer > 0) {
+    ramTimer -= gameDt;
+    for (const e of battle.enemiesAlive) {
+      if (!rammed.has(e) && e.object.position.distanceTo(player.position) < 1.35) {
+        rammed.add(e);
+        const dealt = e.takeHit(15, null);
+        hud.message(`Rammed — ${dealt}.`);
+        state.addLimit(dealt * 0.4);
+      }
+    }
+  }
+  if (player.riding && state.hp < lastHp - 0.01) bikeHits++;
+  if (player.riding && bikeHits >= 3) {
+    bendBike(level.interactables.find((x) => x.id === 'bike1'));
+  }
+
+  // Gated geometry: hide meshes whose flag has opened (chopped boards etc.).
+  for (const g of level.gated) {
+    if (g.mesh && g.mesh.visible && state.flags[g.flag]) g.mesh.visible = false;
+  }
+
   rig.pose = battle.phase === 'fire' ? 'aim' : 'explore';
   const moving = moveDir !== null && !player.locked;
-  rig.update(gameDt, moving ? sample.magnitude : 0);
+  rig.update(gameDt, moving && !player.riding ? sample.magnitude : 0);
 
   // Footsteps on foot-plants (walk phase crosses multiples of pi).
   if (moving) {
@@ -630,12 +783,21 @@ function frame(): void {
   }
   lastHp = state.hp;
 
-  // Interact / execution prompt.
-  const near = !battle.active && !menuOpen ? nearestInteractable() : null;
+  // Interact / execution prompt. Riding: interact = get off, wherever —
+  // and the same key-edge must not immediately remount the dropped bike.
+  let interactConsumed = false;
+  if (player.riding && !menuOpen && sample.interactJust) {
+    const bikeI = level.interactables.find((x) => x.id === 'bike1');
+    if (bikeI) {
+      toggleBike(bikeI);
+      interactConsumed = true;
+    }
+  }
+  const near = !battle.active && !menuOpen && !player.riding ? nearestInteractable() : null;
   if (near) {
     promptEl.textContent = `${sample.padConnected ? 'X' : 'E'}: ${near.prompt}`;
     promptEl.style.display = 'block';
-    if (sample.interactJust) handleInteract(near);
+    if (sample.interactJust && !interactConsumed) handleInteract(near);
   } else if (executionMark) {
     promptEl.textContent = `${sample.padConnected ? 'A' : 'Enter'}: Execute`;
     promptEl.style.display = 'block';

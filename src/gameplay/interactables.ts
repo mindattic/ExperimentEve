@@ -59,7 +59,43 @@ const LOOT: Record<string, LootRoll[]> = {
   ],
 };
 
-export type InteractKind = 'container' | 'salvage' | 'inspect' | 'save' | 'pickup';
+export type InteractKind = 'container' | 'salvage' | 'inspect' | 'save' | 'pickup' | 'trade' | 'alarm' | 'chop' | 'bike';
+
+export type SalvageType = 'car' | 'couch' | 'trashPile' | 'bentBike' | 'semi';
+
+// Salvage: one-time destructive strip. Most things give parts.
+const SALVAGE: Record<SalvageType, LootRoll[]> = {
+  car: [
+    { item: 'scrap', min: 2, max: 4, chance: 1 },
+    { item: 'rag', min: 1, max: 1, chance: 0.5 },
+    { item: 'alcohol', min: 1, max: 1, chance: 0.2 },
+  ],
+  couch: [
+    { item: 'rag', min: 2, max: 3, chance: 1 },
+    { item: 'scrap', min: 1, max: 1, chance: 0.3 },
+  ],
+  trashPile: [
+    { item: 'bottle', min: 1, max: 2, chance: 0.8 },
+    { item: 'rag', min: 1, max: 1, chance: 0.5 },
+  ],
+  bentBike: [
+    { item: 'scrap', min: 2, max: 3, chance: 1 },
+  ],
+  semi: [
+    { item: 'scrap', min: 3, max: 5, chance: 1 },
+    { item: 'sprayCan', min: 1, max: 1, chance: 0.3 },
+  ],
+};
+
+export function rollSalvage(type: SalvageType): { item: ItemId; n: number }[] {
+  const out: { item: ItemId; n: number }[] = [];
+  for (const roll of SALVAGE[type]) {
+    if (rand() <= roll.chance) {
+      out.push({ item: roll.item, n: roll.min + Math.floor(rand() * (roll.max - roll.min + 1)) });
+    }
+  }
+  return out;
+}
 
 export interface InteractableDef {
   id: string;
@@ -75,6 +111,10 @@ export interface InteractableDef {
   grants?: { item: ItemId; n: number }[];
   /** pickup: also teaches this recipe output (blueprint drip). */
   grantsBlueprint?: ItemId;
+  /** salvage: which strip table to roll. */
+  salvageType?: SalvageType;
+  /** chop: GameState flag set when the boards come down. */
+  chopFlag?: string;
   once?: boolean;
 }
 

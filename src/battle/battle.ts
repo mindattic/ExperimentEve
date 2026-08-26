@@ -42,6 +42,10 @@ export class BattleSystem {
   onShot: (() => void) | null = null;
   onVictory: (() => void) | null = null;
   onDefeat: (() => void) | null = null;
+  /** Supplied by main: does Kat carry the fire axe? */
+  hasAxe: (() => boolean) | null = null;
+  private meleePending = false;
+  private readonly lastPlayerPos = new THREE.Vector3();
 
   private readonly dome: THREE.Mesh;
   private readonly targetMarker: THREE.Mesh;
@@ -131,6 +135,7 @@ export class BattleSystem {
     colliders: readonly Collider[],
   ): void {
     if (this.phase === 'inactive') return;
+    this.lastPlayerPos.copy(player.position);
 
     for (const e of this.enemies) e.updateAlways(realDt);
 
@@ -187,6 +192,13 @@ export class BattleSystem {
       case 'fire': {
         this.fireTimer -= realDt;
         if (this.fireTimer <= 0) {
+          if (this.meleePending) {
+            this.meleePending = false;
+            this.spendTurn();
+            this.checkVictory(realDt);
+            if (this.phase === 'fire') this.phase = 'active';
+            break;
+          }
           this.resolveShot();
           this.phase = this.enemiesAlive.length > 0 ? 'active' : this.phase;
           this.checkVictory(realDt);
@@ -227,6 +239,25 @@ export class BattleSystem {
         enabled: s.limit >= 100 && s.ammoInClip > 0,
         action: () => this.openSweep(),
       },
+      ...(this.hasAxe?.()
+        ? [
+            {
+              label: 'Fire Axe  (melee)',
+              enabled: this.nearestEnemyDist() < 1.9,
+              action: () => {
+                const target = this.nearestEnemy();
+                if (target) {
+                  const dealt = target.takeHit(25, null);
+                  this.onMessage?.(`The axe lands — ${dealt}.`);
+                  this.state.addLimit(dealt * 0.5);
+                  if (target.dead) this.onMessage?.(`${target.displayName} is destroyed.`);
+                }
+                this.meleePending = true;
+                this.beginFire(0.8); // rooted longer than a shot
+              },
+            },
+          ]
+        : []),
       {
         label: 'Escape',
         enabled: true,
@@ -236,6 +267,24 @@ export class BattleSystem {
         },
       },
     ];
+  }
+
+  private nearestEnemy(): Enemy | null {
+    let best: Enemy | null = null;
+    let bestD = Infinity;
+    for (const e of this.enemiesAlive) {
+      const d = e.object.position.distanceTo(this.lastPlayerPos);
+      if (d < bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  private nearestEnemyDist(): number {
+    const e = this.nearestEnemy();
+    return e ? e.object.position.distanceTo(this.lastPlayerPos) : Infinity;
   }
 
   private openMenu(): void {

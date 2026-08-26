@@ -70,6 +70,18 @@ export class Sfx {
     this.a.tone({ from: 1200, duration: 0.03, type: 'square', gain: 0.08 });
   }
 
+  /** Axe through boards: low wood crack. */
+  chop(): void {
+    this.a.noiseBurst({ duration: 0.12, filterFrom: 600, filterTo: 150, gain: 0.7 });
+    this.a.tone({ from: 90, to: 50, duration: 0.15, type: 'square', gain: 0.25 });
+  }
+
+  /** Fire alarm: harsh electric clang. Call repeatedly while it rings. */
+  alarmClang(): void {
+    this.a.tone({ from: 720, to: 690, duration: 0.35, type: 'square', gain: 0.3 });
+    this.a.noiseBurst({ duration: 0.08, filterFrom: 3000, gain: 0.15 });
+  }
+
   /** City Hall bell: deep strike + overtone, long decay. */
   bellChime(): void {
     this.a.tone({ from: 147, duration: 2.4, type: 'sine', gain: 0.5, attack: 0.01 });

@@ -1,6 +1,8 @@
 export type ItemId =
   // components
-  | 'bottle' | 'rag' | 'alcohol' | 'sprayCan' | 'lighter'
+  | 'bottle' | 'rag' | 'alcohol' | 'sprayCan' | 'lighter' | 'scrap'
+  // tools/weapons
+  | 'fireAxe'
   // crafted
   | 'bandage' | 'molotov' | 'flamethrower'
   // consumables / ammo
@@ -43,6 +45,14 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   lighter: {
     id: 'lighter', name: 'Lighter', category: 'component',
     desc: 'A stranger\'s initials, scratched out. Fire still answers to anyone.',
+  },
+  scrap: {
+    id: 'scrap', name: 'Scrap Parts', category: 'component',
+    desc: 'Bolts, brackets, a length of good wire. Every car in town is an organ donor now.',
+  },
+  fireAxe: {
+    id: 'fireAxe', name: 'Fire Axe', category: 'crafted',
+    desc: 'IN CASE OF EMERGENCY, BREAK GLASS. Somebody finally agreed this counts.',
   },
   bandage: {
     id: 'bandage', name: 'Bandage', category: 'consumable',

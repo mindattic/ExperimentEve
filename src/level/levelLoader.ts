@@ -14,7 +14,7 @@ export interface LoadedLevel {
   zones: CameraZone[];
   colliders: Collider[];
   /** Colliders active only while their flag is false (e.g. fire blockade). */
-  gated: { flag: string; collider: Collider }[];
+  gated: { flag: string; collider: Collider; mesh?: THREE.Object3D }[];
   interactables: Interactable[];
   triggers: (TriggerDef & { fired: boolean })[];
 }
@@ -55,7 +55,8 @@ export function loadLevel(def: LevelDef): LoadedLevel {
   const gated: LoadedLevel['gated'] = [];
   for (const w of def.walls) {
     const col = segment(w.a[0], w.a[1], w.b[0], w.b[1]);
-    if (w.gated) gated.push({ flag: w.gated, collider: col });
+    const gate = w.gated ? { flag: w.gated, collider: col, mesh: undefined as THREE.Object3D | undefined } : null;
+    if (gate) gated.push(gate);
     else colliders.push(col);
     if (w.invisible) continue;
     const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
@@ -72,6 +73,7 @@ export function loadLevel(def: LevelDef): LoadedLevel {
     mesh.position.set((w.a[0] + w.b[0]) / 2, h / 2, (w.a[1] + w.b[1]) / 2);
     mesh.rotation.y = -Math.atan2(w.b[1] - w.a[1], w.b[0] - w.a[0]);
     root.add(mesh);
+    if (gate) gate.mesh = mesh;
   }
 
   for (const b of def.boxes) {
