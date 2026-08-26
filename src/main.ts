@@ -144,11 +144,16 @@ const garageMachine = {
     },
     {
       name: 'dialer_log.txt',
-      body: 'AMERIGATE ONLINE - SESSION LOG\n6/19 CONNECT 28.8k ... 4hrs (Ray downloading the Bigger Rock trailer)\n6/20 CONNECT 28.8k ... CARRIER LOST 11:52 PM\n6/20 REDIAL ... NO DIAL TONE\n6/21 REDIAL ... NO DIAL TONE\nYou have got nothing.',
+      body: 'AMERIGATE ONLINE - SESSION LOG\n6/19 CONNECT 28.8k ... 4hrs (Ray downloading the Bigger Rock trailer)\n6/19 NOTE: M. picked up the phone at hour 3. Download lost. Words exchanged.\n6/20 CONNECT 28.8k ... CARRIER LOST 11:52 PM\n6/20 REDIAL ... NO DIAL TONE\n6/21 REDIAL ... NO DIAL TONE\nYou have got nothing.',
     },
     {
       name: 'finestein.txt',
       body: 'WHERE IS MY FINESTEIN TAPE, RAY.\nI taped the finale May 14. The tape is GONE.\nThe label is still on the shelf. The LABEL, Ray.\nWho steals the tape and leaves the label.',
+      deleted: true,
+    },
+    {
+      name: 'for_ray.txt',
+      body: 'Ray -\nThe boys made you something. It is on your bench.\nCome home and get it.\n- M.',
       deleted: true,
     },
   ],
@@ -446,6 +451,7 @@ squad.onAlert = (enemies, executed) => {
     sfx.gunshot();
     hud.message('EXECUTION — one down before it starts.');
     subtitles.say('One less.');
+    subtitles.say('...A folded paper falls out of his helmet. Crayon.', 3);
     state.addLimit(40);
   } else {
     subtitles.say('"CONTAMINANT! WEAPONS FREE!"');
@@ -479,6 +485,8 @@ function startNewGame(): void {
   introTimer = 3.4;
   train.visible = true;
   train.position.x = -46;
+  // What she carries off the train: one clip, and the reason she's going.
+  inventory.add('katsCard');
 }
 
 function continueGame(): void {

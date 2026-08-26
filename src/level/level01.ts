@@ -186,6 +186,7 @@ export const LEVEL01: LevelDef = {
     { min: [-6.6, 19.2], max: [-4.9, 20], h: 0.9, color: 0x707a80 }, // kitchen sink counter
     { min: [-5, 22.7], max: [-4.4, 23.3], h: 0.75, color: 0x6a6258 }, // phone table + answering machine
     { min: [-8, 23.2], max: [-7.2, 24.4], h: 2.1, color: 0x5a4c40 }, // bedroom closet
+    { min: [-12.1, 21.1], max: [-11.4, 21.9], h: 0.9, color: 0x2e3236 }, // backyard grill
 
     // South street trash.
     { min: [3.1, -4.4], max: [3.9, -3.6], h: 1, color: 0x4e565c },
@@ -260,6 +261,22 @@ export const LEVEL01: LevelDef = {
     {
       id: 'beastFlyer', x: -12, z: 16.2, prompt: 'Read the flyer on the fence', kind: 'inspect', once: false,
       inspectText: 'POCKETBEASTS CRIMSON & TEAL — COLLECT THEM ALL! Stapled to the fence. Just past it, something has been collecting.',
+    },
+    {
+      id: 'grill1', x: -11.7, z: 21.5, prompt: 'Look at the grill', kind: 'inspect', once: false,
+      inspectText: 'The grill is cold. Plates set for five. The cookout stopped between the second and third burger.',
+    },
+    {
+      id: 'saleBanner', x: -6, z: 5.4, prompt: 'Read the banner', kind: 'inspect', once: false,
+      inspectText: 'FATHER\'S DAY SALE — GRILLS · TIES · TOOLS. "SALE ENDS JUNE 21." It did.',
+    },
+    {
+      id: 'y2kTag', x: -9, z: 0.7, prompt: 'Read the wall', kind: 'inspect', once: false,
+      inspectText: 'Sprayed in careful block letters: THE BUG IS COMING 01/01/00. Eighteen months early, and wrong about which one.',
+    },
+    {
+      id: 'rayCard', x: 29.4, z: 0.6, prompt: 'Look at the construction-paper card', kind: 'inspect', once: false,
+      inspectText: 'HAPPY FATHER\'S DAY DAD — two crayon hands, two names. Waiting on his workbench. The flatbed never came back.',
     },
     { id: 'saveLamp', x: 19.9, z: 1, prompt: 'Rest at the lighthouse lamp', kind: 'save', once: false },
   ],

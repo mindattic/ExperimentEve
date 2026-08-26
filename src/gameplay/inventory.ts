@@ -9,9 +9,11 @@ export type ItemId =
   | 'pocketWatch' | 'pearlNecklace' | 'ring' | 'silverware'
   // 1998 nostalgia baubles (also pawnable)
   | 'pager' | 'durpy' | 'beanBuddy' | 'pocketPal' | 'vhsSinkingShip' | 'cdHeartGoes'
-  | 'blueDress';
+  | 'blueDress'
+  // keepsakes: cannot be sold, spent, or lost
+  | 'katsCard';
 
-export type ItemCategory = 'component' | 'crafted' | 'consumable' | 'ammo' | 'bauble';
+export type ItemCategory = 'component' | 'crafted' | 'consumable' | 'ammo' | 'bauble' | 'keepsake';
 
 export interface ItemDef {
   id: ItemId;
@@ -105,6 +107,10 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   blueDress: {
     id: 'blueDress', name: 'The Blue Dress', category: 'bauble',
     desc: 'Navy blue. Dry-clean only. It has been through something historic. The pawnbroker pays double and asks nothing.',
+  },
+  katsCard: {
+    id: 'katsCard', name: 'Father\'s Day Card (unsigned)', category: 'keepsake',
+    desc: 'She\'s carried it for three weeks. It isn\'t sealed. She hasn\'t signed it. Not for sale.',
   },
 };
 
