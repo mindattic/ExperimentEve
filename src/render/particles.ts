@@ -160,6 +160,28 @@ export class Particles {
   }
 
   /**
+   * Smoke-bomb cloud: a slow, thick, rising column that hangs for seconds.
+   */
+  smokeCloud(at: THREE.Vector3): void {
+    for (let i = 0; i < 70; i++) {
+      const p = this.spawn();
+      if (!p) return;
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * 1.4;
+      p.alive = true;
+      p.pos.set(at.x + Math.sin(a) * r, at.y + 0.2 + Math.random() * 1.1, at.z + Math.cos(a) * r);
+      p.vel.set((Math.random() - 0.5) * 0.9, 0.4 + Math.random() * 0.7, (Math.random() - 0.5) * 0.9);
+      p.maxLife = p.life = 2.2 + Math.random() * 2.4;
+      // Chunky billows: at PSX-HD internal res these read as fat squares.
+      p.size = 0.45 + Math.random() * 0.3;
+      p.gravity = -0.25; // smoke rises, slowly
+      p.drag = 0.5;
+      p.from.setHex(0x9aa2b0);
+      p.to.setHex(0x2c3038);
+    }
+  }
+
+  /**
    * A dark pool that blooms on the asphalt and slowly weathers away.
    * Pooled; the oldest stain is recycled past MAX_STAINS.
    */

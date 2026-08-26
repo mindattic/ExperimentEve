@@ -437,8 +437,8 @@ export const LEVEL01: LevelDef = {
     { id: 'carDoor3', x: -7.6, z: -20.2, prompt: 'Check the cruiser door', kind: 'carDoor', once: false },
     {
       id: 'yardCache', x: 20.5, z: -12, prompt: 'Open the tow-truck toolbox', kind: 'pickup',
-      inspectText: 'A dented toolbox, left where someone would find it. Rounds, a first-aid kit, and no note.',
-      grants: [{ item: 'ammo9', n: 8 }, { item: 'medkit', n: 1 }],
+      inspectText: 'A dented toolbox, left where someone would find it. Rounds, a first-aid kit, two of SOAK\'s smoke bombs, and no note.',
+      grants: [{ item: 'ammo9', n: 8 }, { item: 'medkit', n: 1 }, { item: 'smokeBomb', n: 2 }],
     },
     { id: 'couch1', x: -5.7, z: 17.5, prompt: 'Strip the curb couch', kind: 'salvage', salvageType: 'couch' },
     { id: 'bike1', x: 3.4, z: 24.1, prompt: 'Take the bicycle', kind: 'bike', once: false },

@@ -6,7 +6,7 @@ import type { Inventory } from '../gameplay/inventory';
 import { INFUSIONS } from '../gameplay/infusions';
 import type { InputSample } from '../core/input';
 import type { PlayerController } from '../player/playerController';
-import type { Collider } from '../physics/colliders';
+import { lineBlocked, type Collider } from '../physics/colliders';
 
 export type BattlePhase =
   | 'inactive'
@@ -89,6 +89,38 @@ export class BattleSystem {
   /** Taunted enemies run hot: battle scales their dt by this. */
   private get hasteK(): number {
     return this.taunted ? 1.3 : 1;
+  }
+
+  // ---- cover: hood-height geometry is half the fight -------------------
+  /** Hugging low cover with it between her and the nearest enemy. */
+  inCover = false;
+  private coverAnnounced = false;
+  /** Smoke bomb thrown at this position — main paints the cloud. */
+  onSmoke: ((pos: THREE.Vector3) => void) | null = null;
+
+  /**
+   * Cover check: an AABB collider of hood height (0.6..1.8m), hugged
+   * (within 1.1m) and lying on the line to the nearest living enemy.
+   */
+  private updateCover(colliders: readonly Collider[]): void {
+    this.inCover = false;
+    const e = this.nearestEnemy();
+    if (!e) return;
+    const p = this.lastPlayerPos;
+    for (const c of colliders) {
+      if (c.kind !== 'aabb' || c.topY === undefined || c.topY > 1.8 || c.topY < 0.6) continue;
+      const dx = Math.max(c.minX - p.x, 0, p.x - c.maxX);
+      const dz = Math.max(c.minZ - p.z, 0, p.z - c.maxZ);
+      if (Math.hypot(dx, dz) > 1.1) continue;
+      if (lineBlocked(p.x, p.z, e.object.position.x, e.object.position.z, [c])) {
+        this.inCover = true;
+        if (!this.coverAnnounced) {
+          this.coverAnnounced = true;
+          this.onMessage?.('COVER — it takes the hit before she does.');
+        }
+        return;
+      }
+    }
   }
 
   private readonly dome: THREE.Mesh;
@@ -214,6 +246,8 @@ export class BattleSystem {
     this.styleLabel = '';
     this.taunted = false;
     this.airborne = false;
+    this.inCover = false;
+    this.coverAnnounced = false;
     // Species she's fought before: their weak points glow on sight.
     for (const e of enemies) {
       if (this.state.knownWeaknesses.includes(e.displayName)) e.revealWeakness();
@@ -236,6 +270,7 @@ export class BattleSystem {
   ): void {
     if (this.phase === 'inactive') return;
     this.lastPlayerPos.copy(player.position);
+    this.updateCover(colliders);
 
     for (const e of this.enemies) {
       e.updateAlways(realDt);
@@ -288,7 +323,9 @@ export class BattleSystem {
         playerPos: player.position,
         playerIFrames: player.iFramesActive,
         colliders,
-        dealDamageToPlayer: (amount: number) => this.state.damagePlayer(amount),
+        // Cover eats half of anything that reaches her behind it.
+        dealDamageToPlayer: (amount: number) =>
+          this.state.damagePlayer(this.inCover ? amount * 0.5 : amount),
       };
       // Taunted enemies act faster — she asked for this, literally.
       const eDt = gameDt * this.hasteK;
@@ -516,6 +553,61 @@ export class BattleSystem {
               },
             },
           ]
+        : []),
+      // Blind cover fire: gun over the hood, eyes behind it. Weak, cheap,
+      // and she never leaves the metal. Only offered while covered.
+      ...(this.inCover
+        ? [{
+            label: 'Blind Fire  (2 rounds, stay covered)',
+            enabled: s.ammoInClip >= 2 && this.enemiesAlive.length > 0,
+            action: () => {
+              s.ammoInClip -= 2;
+              let firstWound: THREE.Vector3 | undefined;
+              let total = 0;
+              let hits = 0;
+              for (let i = 0; i < 2; i++) {
+                if (Math.random() < 0.35) continue; // faith-based ballistics
+                const alive = this.enemiesAlive;
+                const e = alive[Math.floor(Math.random() * alive.length)];
+                if (!e) break;
+                const parts = e.parts.filter((p) => p.active);
+                const part = parts[Math.floor(Math.random() * parts.length)] ?? null;
+                const dealt = e.takeHit(s.gunDamage * 0.6, part);
+                const wound = (part?.node ?? e.object).getWorldPosition(new THREE.Vector3());
+                this.onDamage?.(wound, dealt, false);
+                firstWound ??= wound;
+                total += dealt;
+                hits++;
+                if (e.dead) this.onMessage?.(`${e.displayName} is destroyed.`);
+                else this.noteHit(e);
+              }
+              this.onShot?.(firstWound);
+              this.onMessage?.(
+                hits > 0
+                  ? `Blind fire — ${hits}/2 connect for ${total}. The cover holds.`
+                  : 'Blind fire — the night eats both rounds.',
+              );
+              s.addLimit(total * 0.6);
+              this.meleePending = true;
+              this.beginFire(0.5);
+            },
+          }]
+        : []),
+      ...(this.inv && this.inv.count('smokeBomb') > 0
+        ? [{
+            label: `Smoke Bomb  (×${this.inv.count('smokeBomb')})`,
+            enabled: this.enemiesAlive.length > 0,
+            action: () => {
+              this.inv!.remove('smokeBomb');
+              for (const e of this.enemiesAlive) {
+                if (e.object.position.distanceTo(this.lastPlayerPos) < 5) e.stun(3.2);
+              }
+              this.onSmoke?.(this.lastPlayerPos.clone());
+              this.onMessage?.('Paint-thick smoke swallows the street. Nothing in it can find her.');
+              this.meleePending = true;
+              this.beginFire(0.3);
+            },
+          }]
         : []),
       ...(this.inv && this.inv.count('molotov') > 0
         ? [

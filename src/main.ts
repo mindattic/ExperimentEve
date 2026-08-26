@@ -369,6 +369,11 @@ battle.onKill = (e, wasLast) => {
 };
 battle.hasAxe = () => inventory.count('fireAxe') > 0;
 battle.inv = inventory;
+battle.onSmoke = (pos) => {
+  particles.smokeCloud(pos);
+  sfx.dodgeRoll(); // the soft whump of instant weather
+  input.rumble(150, 0.3, 0.5);
+};
 pawnMenu.onMessage = (t) => hud.message(t);
 
 // Audio: everything synthesized; unlocked by the first user gesture.

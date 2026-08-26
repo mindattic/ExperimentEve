@@ -4,7 +4,7 @@ export type ItemId =
   // tools/weapons
   | 'fireAxe' | 'bobbyPin'
   // crafted
-  | 'bandage' | 'molotov' | 'flamethrower'
+  | 'bandage' | 'molotov' | 'flamethrower' | 'smokeBomb'
   // consumables / ammo
   | 'ammo9' | 'medkit'
   // chimeric DNA injectors (the "magic system" — biology at gunpoint)
@@ -82,6 +82,10 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   molotov: {
     id: 'molotov', name: 'Molotov', category: 'crafted',
     desc: 'A bottle that gets to be a protest again.',
+  },
+  smokeBomb: {
+    id: 'smokeBomb', name: 'Smoke Bomb', category: 'crafted',
+    desc: 'Half a can of paint and a rag fuse. SOAK calls this "instant weather." Everything in the cloud loses her.',
   },
   flamethrower: {
     id: 'flamethrower', name: 'Makeshift Flamethrower', category: 'crafted',
@@ -275,6 +279,11 @@ export const RECIPES: Recipe[] = [
     inputs: ['rag', 'alcohol'],
     output: 'bandage',
     line: 'Clean-ish rag, alcohol. Field medicine.',
+  },
+  {
+    inputs: ['sprayCan', 'rag'],
+    output: 'smokeBomb',
+    line: 'Paint can, rag fuse. Instant weather.',
   },
   {
     inputs: ['scrap'],
