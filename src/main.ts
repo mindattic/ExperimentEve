@@ -26,6 +26,7 @@ import { Subtitles } from './ui/subtitles';
 import { InventoryMenu } from './ui/inventoryMenu';
 import { loadLevel, triggerContains } from './level/levelLoader';
 import { LEVEL01 } from './level/level01';
+import { buildProtestField } from './level/props/protestField';
 import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
 import { WorldAI } from './enemies/worldAI';
@@ -75,6 +76,9 @@ function applyTimeOfDay(): void {
 // Level.
 const level = loadLevel(LEVEL01);
 scene.add(level.root);
+
+// The June 20th march ended here. West end of the cross street.
+scene.add(buildProtestField(-13, 0.8, -5.5, 5.2, 22));
 
 // Dynamic set-dressing: truck fire + lighthouse save lamp.
 const fireGroup = new THREE.Group();
@@ -164,6 +168,7 @@ const garageMachine = {
 const battle = new BattleSystem(state, scene, hudEl, canvas);
 battle.onMessage = (t) => hud.message(t);
 battle.hasAxe = () => inventory.count('fireAxe') > 0;
+battle.inv = inventory;
 pawnMenu.onMessage = (t) => hud.message(t);
 
 // Audio: everything synthesized; unlocked by the first user gesture.
@@ -475,6 +480,10 @@ function fireTrigger(id: string): void {
     }
     case 'catScare':
       scares.catDash(-3.8, 3.8, player.position.z - 2.5);
+      break;
+    case 'protestBark':
+      subtitles.say('...', 1.4);
+      subtitles.say('I don\'t see any bullet wounds.', 3.2);
       break;
     case 'shutterScare':
       scares.shutterBang();

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Enemy, EnemyPart } from '../enemies/enemyBase';
 import type { GameState } from '../gameplay/gameState';
+import type { Inventory } from '../gameplay/inventory';
 import type { InputSample } from '../core/input';
 import type { PlayerController } from '../player/playerController';
 import type { Collider } from '../physics/colliders';
@@ -44,6 +45,8 @@ export class BattleSystem {
   onDefeat: (() => void) | null = null;
   /** Supplied by main: does Kat carry the fire axe? */
   hasAxe: (() => boolean) | null = null;
+  /** Supplied by main: crafted-weapon ammo lives in the inventory. */
+  inv: Inventory | null = null;
   private meleePending = false;
   private readonly lastPlayerPos = new THREE.Vector3();
 
@@ -239,6 +242,55 @@ export class BattleSystem {
         enabled: s.limit >= 100 && s.ammoInClip > 0,
         action: () => this.openSweep(),
       },
+      ...(this.inv && this.inv.count('molotov') > 0
+        ? [
+            {
+              label: `Molotov  (×${this.inv.count('molotov')})`,
+              enabled: this.enemiesAlive.length > 0,
+              action: () => {
+                this.inv!.remove('molotov');
+                const center = this.nearestEnemy();
+                if (center) {
+                  let hits = 0;
+                  for (const e of this.enemiesAlive) {
+                    if (e.object.position.distanceTo(center.object.position) < 3) {
+                      const dealt = e.takeHit(35, null);
+                      this.state.addLimit(dealt * 0.3);
+                      hits++;
+                      if (e.dead) this.onMessage?.(`${e.displayName} burns down.`);
+                    }
+                  }
+                  this.onMessage?.(`The bottle gets to be a protest again. ${hits} caught in the fire.`);
+                }
+                this.meleePending = true;
+                this.beginFire(0.6);
+              },
+            },
+          ]
+        : []),
+      ...(this.inv && this.inv.count('flamethrower') > 0
+        ? [
+            {
+              label: `Flamethrower  (paint ×${this.inv.count('sprayCan')})`,
+              enabled: this.inv.count('sprayCan') > 0 && this.nearestEnemyDist() < 4.2,
+              action: () => {
+                this.inv!.remove('sprayCan');
+                let hits = 0;
+                for (const e of this.enemiesAlive) {
+                  if (e.object.position.distanceTo(this.lastPlayerPos) < 4.2) {
+                    const dealt = e.takeHit(22, null);
+                    this.state.addLimit(dealt * 0.3);
+                    hits++;
+                    if (e.dead) this.onMessage?.(`${e.displayName} is painted over. Permanently.`);
+                  }
+                }
+                this.onMessage?.(`A cone of burning paint. ${hits} hit.`);
+                this.meleePending = true;
+                this.beginFire(0.7);
+              },
+            },
+          ]
+        : []),
       ...(this.hasAxe?.()
         ? [
             {

@@ -291,6 +291,10 @@ export const LEVEL01: LevelDef = {
       inspectText: 'The island is lit up like a shift change. Boats run out every few minutes. They come back empty.',
     },
     {
+      id: 'protestField', x: -9, z: 3, radius: 2.4, prompt: 'Look at them', kind: 'inspect', once: false,
+      inspectText: 'Dozens of them, dropped mid-march. Signs still in hand: WE ARE NOT YOUR CONTROL GROUP. OUR KIDS DRANK IT TOO.',
+    },
+    {
       id: 'islandTag', x: -13, z: 3, prompt: 'Read the argument on the wall', kind: 'inspect', once: false,
       inspectText: 'SOAK: "THEY TAKE THEM TO THE ISLAND." REN, underneath, in red: "the island was FIRST." Someone has underlined FIRST three times.',
     },
@@ -322,6 +326,7 @@ export const LEVEL01: LevelDef = {
     { id: 'blockadeSwarm', polygon: [[-10, -25], [4, -25], [4, -18], [-10, -18]], once: true },
     { id: 'sliceEnd', polygon: [[-14, -30], [6, -30], [6, -27], [-14, -27]], once: true },
     { id: 'catScare', polygon: [[-4, 8], [4, 8], [4, 12], [-4, 12]], once: true },
+    { id: 'protestBark', polygon: [[-13, 0], [-5, 0], [-5, 6], [-13, 6]], once: true },
     { id: 'shutterScare', polygon: [[-4.5, 21.5], [-3, 21.5], [-3, 24.5], [-4.5, 24.5]], once: true },
     { id: 'dogFence', polygon: [[22.5, -16], [26.5, -16], [26.5, -10], [22.5, -10]], once: true },
   ],
