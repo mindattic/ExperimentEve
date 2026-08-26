@@ -32,11 +32,13 @@ export class LureHeron extends Enemy {
   private lureDamage = 0;
   private dimmed = false;
 
+  private readonly bodyMesh: THREE.Mesh;
   private readonly neckGroup = new THREE.Group();
   private readonly neckMesh: THREE.Mesh;
   private readonly headGroup = new THREE.Group();
   private readonly lure: THREE.Mesh;
   private readonly lureMat: THREE.MeshLambertMaterial;
+  private readonly legs: THREE.Mesh[] = [];
 
   constructor() {
     super();
@@ -44,47 +46,71 @@ export class LureHeron extends Enemy {
     this.radius = 0.5;
 
     const featherMat = makePS1Material({ color: 0x6d7a78 });
-    const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32, 7, 5), featherMat);
-    bodyMesh.scale.set(1, 1.2, 1.3);
-    bodyMesh.position.y = 0.95;
-    this.object.add(bodyMesh);
+    this.bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32, 9, 7), featherMat);
+    this.bodyMesh.scale.set(1, 1.2, 1.3);
+    this.bodyMesh.position.y = 0.95;
+    this.object.add(this.bodyMesh);
+
+    // Small tail-feather tuft, fanned off the back.
+    const tailTuft = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.26, 6), featherMat.clone());
+    tailTuft.rotation.x = Math.PI * 0.42;
+    tailTuft.position.set(0, 1.0, -0.36);
+    this.object.add(tailTuft);
 
     const legMat = makePS1Material({ color: 0xd8c060 });
     for (const sx of [-0.12, 0.12]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.9, 5), legMat.clone());
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.9, 8), legMat.clone());
       leg.position.set(sx, 0.45, 0);
       this.object.add(leg);
+      this.legs.push(leg);
+      // Splayed toe claw at the foot.
+      const toe = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.09, 5), legMat.clone());
+      toe.rotation.x = Math.PI / 2;
+      toe.position.set(0, -0.44, 0.06);
+      leg.add(toe);
     }
 
     // Neck: a pivot at the chest; the mesh extends forward along local +z,
     // so both coil (rotation) and reach (scale/length) can animate.
     this.neckGroup.position.set(0, 1.05, 0.1);
     this.object.add(this.neckGroup);
-    this.neckMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, REST_REACH, 5), featherMat.clone());
+    this.neckMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, REST_REACH, 8), featherMat.clone());
     this.neckMesh.geometry.translate(0, REST_REACH / 2, 0);
     this.neckMesh.rotation.x = Math.PI / 2;
     this.neckGroup.add(this.neckMesh);
 
     this.headGroup.position.set(0, 0, REST_REACH);
     this.neckGroup.add(this.headGroup);
-    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.32, 5), makePS1Material({ color: 0xd8a020 }));
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.32, 7), makePS1Material({ color: 0xd8a020 }));
     beak.rotation.x = Math.PI / 2;
     beak.position.z = 0.16;
     this.headGroup.add(beak);
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 5), featherMat.clone());
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), featherMat.clone());
     this.headGroup.add(skull);
 
+    // Beady eyes with a glinting highlight, set either side of the skull.
+    const eyeMat = makePS1Material({ color: 0x1a1614 });
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffe9b0 });
+    for (const sx of [-0.06, 0.06]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.026, 5, 4), eyeMat);
+      eye.position.set(sx, 0.03, 0.09);
+      this.headGroup.add(eye);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.009, 4, 3), glintMat);
+      glint.position.set(sx + 0.01, 0.04, 0.105);
+      this.headGroup.add(glint);
+    }
+
     // Dangling anglerfish lure: thin rod + glowing bulb, always a weak point.
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.3, 4), makePS1Material({ color: 0x2a2a2a }));
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.3, 6), makePS1Material({ color: 0x2a2a2a }));
     rod.position.set(0, -0.16, 0.12);
     this.headGroup.add(rod);
     this.lureMat = makePS1Material({ color: 0x2a3a1a });
-    this.lure = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5), this.lureMat);
+    this.lure = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), this.lureMat);
     this.lure.position.set(0, -0.31, 0.12);
     this.headGroup.add(this.lure);
 
     this.parts = [
-      { tag: 'body', node: bodyMesh, radius: 0.42, damageMultiplier: 1, weakPoint: false, active: true },
+      { tag: 'body', node: this.bodyMesh, radius: 0.42, damageMultiplier: 1, weakPoint: false, active: true },
       { tag: 'lure', node: this.lure, radius: 0.12, damageMultiplier: 6, weakPoint: true, active: true },
     ];
     this.registerFlashMaterials();
@@ -108,6 +134,12 @@ export class LureHeron extends Enemy {
     if (this.dead) return;
     this.t += dt;
     this.timer -= dt;
+
+    // Slow chest breathing and a faint weight-shift between the two legs.
+    const breathe = 1 + Math.sin(this.t * 1.8) * 0.025;
+    this.bodyMesh.scale.set(breathe, 1.2 * breathe, 1.3 * breathe);
+    if (this.legs[0]) this.legs[0].rotation.z = Math.sin(this.t * 0.7) * 0.03;
+    if (this.legs[1]) this.legs[1].rotation.z = -Math.sin(this.t * 0.7) * 0.03;
 
     const toPlayer = ctx.playerPos.clone().sub(this.object.position);
     toPlayer.y = 0;

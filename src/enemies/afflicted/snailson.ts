@@ -26,6 +26,7 @@ export class Snailson extends Afflicted {
   private rollDir = new THREE.Vector3(0, 0, 1);
   private rollTraveled = 0;
   private rollHit = false;
+  private t = 0;
 
   constructor() {
     super();
@@ -42,8 +43,18 @@ export class Snailson extends Afflicted {
     this.neckJoint.position.set(0, 0.35, -0.12);
     this.torso.add(this.neckJoint);
     const jointMat = makePS1Material({ color: 0x8a7a5c });
-    const jointMesh = new THREE.Mesh(new THREE.SphereGeometry(0.09, 5, 4), jointMat);
+    const jointMesh = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), jointMat);
     this.neckJoint.add(jointMesh);
+    // Eye stalks: the one part of a snail nobody wants grafted onto a neck.
+    for (const s of [-1, 1]) {
+      const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.1, 6), jointMat);
+      stalk.position.set(s * 0.05, 0.06, 0.02);
+      stalk.rotation.x = -0.3;
+      this.neckJoint.add(stalk);
+      const eyeball = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 5), makePS1Material({ color: 0x1a1a1a }));
+      eyeball.position.set(s * 0.05, 0.11, 0.03);
+      this.neckJoint.add(eyeball);
+    }
 
     // Big flattened spiral shell riding on his back.
     this.shell = new THREE.Group();
@@ -58,6 +69,14 @@ export class Snailson extends Afflicted {
     spiral.position.set(0, 0.18, 0.05);
     spiral.rotation.x = -0.3;
     this.shell.add(spiral);
+    // Concentric growth ridges around the whorl.
+    const ridgeMat = makePS1Material({ color: 0x54461f });
+    for (let i = 0; i < 2; i++) {
+      const ridge = new THREE.Mesh(new THREE.TorusGeometry(0.12 + i * 0.09, 0.012, 4, 8), ridgeMat);
+      ridge.position.set(0, 0.15 - i * 0.02, 0.05);
+      ridge.rotation.x = Math.PI / 2 - 0.3;
+      this.shell.add(ridge);
+    }
 
     this.parts = [
       { tag: 'body', node: this.torso, radius: 0.45, damageMultiplier: 1, weakPoint: false, active: true },
@@ -67,12 +86,14 @@ export class Snailson extends Afflicted {
   }
 
   protected updateUpright(dt: number, ctx: BattleContext): void {
+    this.t += dt;
     const dist = this.object.position.distanceTo(ctx.playerPos);
     this.parts[1]!.active = this.state === 'teeter' || this.state === 'roll';
 
     switch (this.state) {
       case 'approach': {
-        this.shell.rotation.z = 0;
+        // Too heavy to carry smoothly: the shell rocks with every dragging step.
+        this.shell.rotation.z = Math.sin(this.t * 3.2) * 0.04;
         this.timer -= dt;
         if (dist > 4.5) {
           this.shamble(dt, ctx.playerPos);

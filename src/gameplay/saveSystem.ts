@@ -13,6 +13,7 @@ export interface SaveData {
   equipped?: GameState['equipped'];
   weaponId?: GameState['weaponId'];
   mods?: GameState['mods'];
+  knownWeaknesses?: string[];
   hp: number;
   maxHp: number;
   pe: number;
@@ -45,6 +46,7 @@ export function saveGame(
     equipped: { ...state.equipped },
     weaponId: state.weaponId,
     mods: { ...state.mods },
+    knownWeaknesses: [...state.knownWeaknesses],
     hp: state.hp,
     maxHp: state.maxHp,
     pe: state.pe,
@@ -86,6 +88,7 @@ export function applySave(data: SaveData, state: GameState, inv: Inventory): voi
   state.equipped = { ...data.equipped };
   state.weaponId = data.weaponId ?? 'dutyPistol';
   state.mods = { damage: 0, clip: 0, action: 0, grip: 0, ...data.mods };
+  state.knownWeaknesses = [...(data.knownWeaknesses ?? [])];
   state.recomputeDerived();
   state.hp = data.hp;
   state.pe = data.pe;

@@ -21,6 +21,8 @@ export class TentacleDoberman extends Enemy {
   private readonly tentacles: THREE.Mesh[] = [];
   private readonly tentacleMats: THREE.MeshLambertMaterial[] = [];
   private readonly legs: THREE.Mesh[] = [];
+  private readonly head: THREE.Mesh;
+  private readonly eyeMat: THREE.MeshBasicMaterial;
   private lashHit = false;
   private biteHit = false;
   private lastHp = this.hp;
@@ -42,21 +44,35 @@ export class TentacleDoberman extends Enemy {
     this.bodyGroup.add(chest);
 
     const headMat = makePS1Material({ color: 0x1a1512 });
-    const head = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.4, 6), headMat);
-    head.rotation.x = Math.PI / 2;
-    head.position.set(0, 0.52, 0.55);
-    this.bodyGroup.add(head);
+    this.head = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.4, 8), headMat);
+    this.head.rotation.x = Math.PI / 2;
+    this.head.position.set(0, 0.52, 0.55);
+    this.bodyGroup.add(this.head);
+
+    // Glinting eyes and a pair of fangs at the muzzle tip.
+    this.eyeMat = new THREE.MeshBasicMaterial({ color: 0x882222 });
+    for (const sx of [-0.06, 0.06]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 5, 4), this.eyeMat);
+      eye.position.set(sx, 0.03, 0.08);
+      this.head.add(eye);
+    }
+    const fangMat = makePS1Material({ color: 0xe8e4d8 });
+    for (const sx of [-0.04, 0.04]) {
+      const fang = new THREE.Mesh(new THREE.ConeGeometry(0.015, 0.06, 5), fangMat);
+      fang.position.set(sx, -0.04, -0.18);
+      this.head.add(fang);
+    }
 
     const earMat = makePS1Material({ color: 0x120e0c });
     for (const sx of [-0.1, 0.1]) {
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 4), earMat);
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 6), earMat);
       ear.position.set(sx, 0.68, 0.5);
       this.bodyGroup.add(ear);
     }
 
     const legMat = makePS1Material({ color: 0x110d0a });
     for (const [sx, sz] of [[-0.14, 0.28], [0.14, 0.28], [-0.13, -0.28], [0.13, -0.28]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.42, 4), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.42, 7), legMat);
       leg.position.set(sx, 0.21, sz);
       this.bodyGroup.add(leg);
       this.legs.push(leg);
@@ -65,9 +81,10 @@ export class TentacleDoberman extends Enemy {
     // Squid tentacles knotted across the shoulders/back.
     this.tentacleGroup.position.set(0, 0.6, -0.1);
     this.bodyGroup.add(this.tentacleGroup);
+    const suckerMat = makePS1Material({ color: 0x7a5a72 });
     for (let i = 0; i < 5; i++) {
       const mat = makePS1Material({ color: 0x5a3a52 });
-      const tentacle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.06, 0.55, 4), mat);
+      const tentacle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.06, 0.55, 6), mat);
       const ang = (i / 5) * Math.PI * 2;
       tentacle.position.set(Math.cos(ang) * 0.1, 0.2, Math.sin(ang) * 0.1 - 0.1);
       tentacle.rotation.z = Math.cos(ang) * 0.3;
@@ -75,6 +92,13 @@ export class TentacleDoberman extends Enemy {
       this.tentacleGroup.add(tentacle);
       this.tentacles.push(tentacle);
       this.tentacleMats.push(mat);
+
+      // Sucker bumps along a couple of tentacles for texture.
+      if (i < 2) {
+        const sucker = new THREE.Mesh(new THREE.SphereGeometry(0.025, 5, 4), suckerMat.clone());
+        sucker.position.set(0, 0.22, 0);
+        tentacle.add(sucker);
+      }
     }
 
     this.object.add(this.bodyGroup);
@@ -102,6 +126,10 @@ export class TentacleDoberman extends Enemy {
     tentaclePart.active = this.state === 'coil' || this.state === 'lash';
     const glow = tentaclePart.active ? 0x662255 : 0x000000;
     for (const mat of this.tentacleMats) mat.emissive.setHex(glow);
+
+    // Eyes glint brighter with the tentacles, and the head lunges into bites.
+    this.eyeMat.color.setHex(tentaclePart.active ? 0xcc4444 : 0x882222);
+    this.head.position.z = 0.55 + (this.state === 'bite' ? Math.sin(this.t * 30) * 0.03 : 0);
 
     switch (this.state) {
       case 'sprint': {

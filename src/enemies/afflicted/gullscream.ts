@@ -34,7 +34,7 @@ export class Gullscream extends Afflicted {
     this.gullHead = new THREE.Group();
     this.gullHead.position.set(0, 0.65, 0);
     torso.add(this.gullHead);
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), makePS1Material({ color: 0xe8e4da }));
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.16, 9, 7), makePS1Material({ color: 0xe8e4da }));
     this.gullHead.add(skull);
     const beakMat = makePS1Material({ color: 0xd98a2b });
     const beakUpper = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, 0.32), beakMat);
@@ -45,14 +45,32 @@ export class Gullscream extends Afflicted {
     beakLower.position.set(0, -0.03, 0.2);
     beakLower.rotation.x = 0.2;
     this.gullHead.add(beakLower);
-    const throat = new THREE.Mesh(new THREE.SphereGeometry(0.05, 4, 3), makePS1Material({ color: 0x3a1010 }));
+    // Nostril slits: the one part of the beak that still looks earned.
+    for (const s of [-1, 1]) {
+      const nostril = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.012, 0.03), makePS1Material({ color: 0x8a541a }));
+      nostril.position.set(s * 0.016, 0.05, 0.14);
+      this.gullHead.add(nostril);
+    }
+    const throat = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), makePS1Material({ color: 0x3a1010 }));
     throat.position.set(0, 0, 0.12);
     this.gullHead.add(throat);
     const eyeMat = makePS1Material({ color: 0x1a1a1a });
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     for (const s of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 3), eyeMat);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 5), eyeMat);
       eye.position.set(s * 0.09, 0.06, 0.08);
       this.gullHead.add(eye);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.009, 4, 3), glintMat);
+      glint.position.set(s * 0.1, 0.075, 0.1);
+      this.gullHead.add(glint);
+    }
+    // Feather tuft: a ragged crest that never lies flat.
+    const tuftMat = makePS1Material({ color: 0xd8d2c4 });
+    for (let i = 0; i < 3; i++) {
+      const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.08, 5), tuftMat);
+      tuft.position.set((i - 1) * 0.03, 0.17, -0.06 + i * 0.01);
+      tuft.rotation.x = -0.5 + i * 0.15;
+      this.gullHead.add(tuft);
     }
 
     this.parts = [
@@ -67,6 +85,9 @@ export class Gullscream extends Afflicted {
     this.t += dt;
     this.timer -= dt;
     const dist = this.object.position.distanceTo(ctx.playerPos);
+
+    // Idle jitter: a gull's head never sits still, even between lunges.
+    this.gullHead.rotation.z = Math.sin(this.t * 3.4) * 0.06;
 
     switch (this.state) {
       case 'approach': {

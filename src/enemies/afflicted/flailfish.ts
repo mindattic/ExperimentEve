@@ -26,11 +26,11 @@ export class Flailfish extends Afflicted {
     this.object.add(buildLegs(clothes));
 
     const bodyMat = makePS1Material({ color: 0x5c7a6e });
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.28, 7, 6), bodyMat);
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.28, 9, 7), bodyMat);
     body.scale.set(1, 0.85, 1.9);
     body.position.y = 1.05;
     this.fish.add(body);
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.4, 4), bodyMat);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.4, 7), bodyMat);
     tail.rotation.x = Math.PI / 2;
     tail.position.set(0, 1.0, -0.55);
     this.fish.add(tail);
@@ -40,13 +40,30 @@ export class Flailfish extends Afflicted {
       fin.rotation.z = s * 0.5;
       this.fish.add(fin);
     }
-    const eyeMat = makePS1Material({ color: 0xf2f0e6 });
+    // Dorsal fin: a stiff triangular ridge, the only part of him not flopping.
+    const dorsal = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.24, 6), bodyMat);
+    dorsal.rotation.z = Math.PI;
+    dorsal.rotation.x = 0.35;
+    dorsal.position.set(0, 1.28, 0.05);
+    this.fish.add(dorsal);
+    // Gill slits: dark creases nobody asked for.
+    const gillMat = makePS1Material({ color: 0x2a1512 });
     for (const s of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 4, 3), eyeMat);
+      const gill = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.14, 0.04), gillMat);
+      gill.position.set(s * 0.24, 1.05, 0.32);
+      this.fish.add(gill);
+    }
+    const eyeMat = makePS1Material({ color: 0xf2f0e6 });
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (const s of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 5), eyeMat);
       eye.position.set(s * 0.15, 1.15, 0.42);
       this.fish.add(eye);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.014, 4, 3), glintMat);
+      glint.position.set(s * 0.16, 1.17, 0.46);
+      this.fish.add(glint);
     }
-    this.mouth = new THREE.Mesh(new THREE.SphereGeometry(0.09, 5, 4), makePS1Material({ color: 0x2a1512 }));
+    this.mouth = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), makePS1Material({ color: 0x2a1512 }));
     this.mouth.position.set(0, 1.0, 0.5);
     this.fish.add(this.mouth);
     this.object.add(this.fish);

@@ -33,21 +33,33 @@ export class Eelneck extends Afflicted {
     let parent: THREE.Object3D = new THREE.Group();
     parent.position.set(0, 0.5, 0);
     torso.add(parent);
+    const finMat = makePS1Material({ color: 0x2c4636 });
     for (let i = 0; i < 4; i++) {
       const seg = new THREE.Group();
       if (i > 0) seg.position.y = 0.24;
-      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.065 - i * 0.008, 0.07 - i * 0.008, 0.26, 5), neckMat);
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.065 - i * 0.008, 0.07 - i * 0.008, 0.26, 8), neckMat);
       mesh.position.y = 0.13;
       seg.add(mesh);
+      // Dorsal fin ridge: the giveaway that this was never a human neck.
+      const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.05, 0.2), finMat);
+      ridge.position.set(0, 0.13, -0.06);
+      seg.add(ridge);
       parent.add(seg);
       this.segs.push(seg);
       parent = seg;
     }
-    const head = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.3, 5), makePS1Material({ color: 0x2c4636 }));
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.3, 8), makePS1Material({ color: 0x2c4636 }));
     head.rotation.x = -Math.PI / 2;
     head.position.y = 0.28;
     parent.add(head);
     this.eelHead = head;
+    // Eyes: small, flat, unblinking.
+    const eyeMat = makePS1Material({ color: 0x0e0e0c });
+    for (const s of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 5), eyeMat);
+      eye.position.set(s * 0.055, 0.02, 0.18);
+      head.add(eye);
+    }
 
     this.parts = [
       { tag: 'body', node: torso, radius: 0.4, damageMultiplier: 1, weakPoint: false, active: true },

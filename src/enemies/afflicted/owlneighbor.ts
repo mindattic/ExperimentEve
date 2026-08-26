@@ -12,6 +12,7 @@ export class Owlneighbor extends Afflicted {
   readonly displayName = 'Owlneighbor';
   private state: State = 'wander';
   private timer = 1 + Math.random();
+  private t = 0;
   private grabDone = false;
   private driftTimer = 0;
   private readonly driftTarget = new THREE.Vector3();
@@ -35,18 +36,30 @@ export class Owlneighbor extends Afflicted {
     this.headPivot = new THREE.Group();
     this.headPivot.position.set(0, 0.65, 0);
     torso.add(this.headPivot);
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 5), makePS1Material({ color: 0xc9a68c }));
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.13, 9, 7), makePS1Material({ color: 0xc9a68c }));
     this.headPivot.add(skull);
-    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.09, 4), makePS1Material({ color: 0x8a6a2a }));
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.09, 7), makePS1Material({ color: 0x8a6a2a }));
     beak.rotation.x = Math.PI / 2;
     beak.position.set(0, -0.02, 0.13);
     this.headPivot.add(beak);
     const eyeMat = makePS1Material({ color: 0xf2e6b0 });
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x1a1610 });
     for (const s of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 5, 4), eyeMat);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), eyeMat);
       eye.position.set(s * 0.08, 0.02, 0.09);
       this.headPivot.add(eye);
       this.eyes.push(eye);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.02, 5, 4), pupilMat);
+      pupil.position.set(s * 0.09, 0.02, 0.13);
+      this.headPivot.add(pupil);
+    }
+    // Ear tufts: raised feather horns, always faintly twitching.
+    const tuftMat = makePS1Material({ color: 0xa8896a });
+    for (const s of [-1, 1]) {
+      const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.07, 5), tuftMat);
+      tuft.position.set(s * 0.07, 0.14, 0);
+      tuft.rotation.z = s * 0.25;
+      this.headPivot.add(tuft);
     }
 
     this.parts = [
@@ -57,6 +70,7 @@ export class Owlneighbor extends Afflicted {
   }
 
   protected updateUpright(dt: number, ctx: BattleContext): void {
+    this.t += dt;
     this.timer -= dt;
     const dist = this.object.position.distanceTo(ctx.playerPos);
     this.parts[1]!.active = this.state === 'blink' || this.state === 'grab';
@@ -67,6 +81,8 @@ export class Owlneighbor extends Afflicted {
       const worldAngle = Math.atan2(toPlayer.x, toPlayer.z);
       this.headPivot.rotation.y = worldAngle - this.object.rotation.y;
     }
+    // Unsettling micro-tilt: the head never sits perfectly level while it watches.
+    this.headPivot.rotation.z = Math.sin(this.t * 1.6) * 0.05;
 
     const eyeScale = this.state === 'blink' || this.state === 'grab' ? 1.8 : 1;
     for (const eye of this.eyes) eye.scale.setScalar(eyeScale);

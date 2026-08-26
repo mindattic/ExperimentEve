@@ -27,6 +27,7 @@ export class GutterSerpent extends Enemy {
   private readonly earR: THREE.Mesh;
   private readonly segments: THREE.Mesh[] = [];
   private readonly segWorldPos: THREE.Vector3[] = [];
+  private readonly whiskers: THREE.Mesh[] = [];
 
   constructor() {
     super();
@@ -34,28 +35,54 @@ export class GutterSerpent extends Enemy {
     this.radius = 0.4;
 
     const furMat = makePS1Material({ color: 0x5a4a3a });
-    this.headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), furMat);
+    this.headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.16, 9, 7), furMat);
     this.headMesh.scale.set(1, 0.85, 1.1);
     this.headGroup.add(this.headMesh);
 
-    const snout = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 5), furMat);
+    const snout = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 7), furMat);
     snout.rotation.x = Math.PI / 2;
     snout.position.set(0, -0.02, 0.16);
     this.headGroup.add(snout);
 
+    // Tiny cat fangs poking past the snout tip.
+    const fangMat = makePS1Material({ color: 0xe8e0c8 });
+    for (const sx of [-0.025, 0.025]) {
+      const fang = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.045, 4), fangMat);
+      fang.rotation.x = Math.PI;
+      fang.position.set(sx, -0.055, 0.2);
+      this.headGroup.add(fang);
+    }
+
     const earMat = makePS1Material({ color: 0x4a3a2c });
-    this.earL = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.13, 4), earMat);
+    this.earL = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.13, 6), earMat);
     this.earL.position.set(-0.08, 0.16, -0.02);
     this.headGroup.add(this.earL);
-    this.earR = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.13, 4), earMat.clone());
+    this.earR = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.13, 6), earMat.clone());
     this.earR.position.set(0.08, 0.16, -0.02);
     this.headGroup.add(this.earR);
 
     const eyeMat = makePS1Material({ color: 0xd8c840 });
+    const eyeshineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     for (const sx of [-0.07, 0.07]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 3), eyeMat);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 5), eyeMat);
       eye.position.set(sx, 0.02, 0.14);
       this.headGroup.add(eye);
+      const shine = new THREE.Mesh(new THREE.SphereGeometry(0.008, 4, 3), eyeshineMat);
+      shine.position.set(sx - 0.008, 0.03, 0.165);
+      this.headGroup.add(shine);
+    }
+
+    // Whiskers: thin sprays either side of the snout; twitch with breathing.
+    const whiskerMat = makePS1Material({ color: 0xd8d0c0 });
+    for (const side of [-1, 1]) {
+      for (const tilt of [-0.3, 0.3]) {
+        const whisker = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.006, 0.14, 3), whiskerMat);
+        whisker.geometry.translate(0, 0.07, 0);
+        whisker.position.set(side * 0.06, -0.015, 0.17);
+        whisker.rotation.z = side * (Math.PI / 2 - 0.4) + tilt * side;
+        this.headGroup.add(whisker);
+        this.whiskers.push(whisker);
+      }
     }
 
     this.headGroup.position.set(0, 0.16, 0.3);
@@ -65,12 +92,12 @@ export class GutterSerpent extends Enemy {
     const legMat = makePS1Material({ color: 0x2c2620 });
     for (let i = 0; i < SEGMENT_COUNT; i++) {
       const k = 1 - (i / SEGMENT_COUNT) * 0.4;
-      const seg = new THREE.Mesh(new THREE.SphereGeometry(0.14 * k, 6, 4), segMat);
+      const seg = new THREE.Mesh(new THREE.SphereGeometry(0.14 * k, 9, 6), segMat);
       seg.scale.set(1, 0.75, 1.15);
       this.object.add(seg);
       this.segments.push(seg);
       for (const side of [-1, 1]) {
-        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.02, 0.16, 3), legMat);
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.02, 0.16, 6), legMat);
         leg.position.set(side * 0.13, -0.05, 0);
         leg.rotation.z = side * 1.1;
         seg.add(leg);
@@ -100,6 +127,13 @@ export class GutterSerpent extends Enemy {
     const dist = toPlayer.length();
     if (this.state !== 'strike' && dist > 0.01) {
       this.object.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
+    }
+
+    // Idle breathing + whisker twitch, layered under whatever the state does.
+    const breathe = 1 + Math.sin(this.t * 5 + this.weaveSeed) * 0.03;
+    this.headMesh.scale.set(breathe, 0.85 * breathe, 1.1 * breathe);
+    for (let i = 0; i < this.whiskers.length; i++) {
+      this.whiskers[i]!.rotation.x = Math.sin(this.t * 7 + i * 1.3) * 0.08;
     }
 
     switch (this.state) {

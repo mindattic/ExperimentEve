@@ -32,6 +32,7 @@ export class BulwarkMoose extends Enemy {
   private readonly headGroup = new THREE.Group();
   private readonly head: THREE.Mesh;
   private readonly legFL: THREE.Mesh;
+  private readonly legs: THREE.Mesh[] = [];
   private readonly puffs: THREE.Mesh[] = [];
 
   constructor() {
@@ -45,19 +46,29 @@ export class BulwarkMoose extends Enemy {
     this.object.add(this.torso);
 
     const shellMat = makePS1Material({ color: 0x50603a });
-    const shell = new THREE.Mesh(new THREE.SphereGeometry(1.05, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.55), shellMat);
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(1.05, 9, 7, 0, Math.PI * 2, 0, Math.PI * 0.55), shellMat);
     shell.scale.set(1, 0.6, 1.15);
     shell.position.set(0, 1.55, 0.15);
     this.object.add(shell);
 
+    const hoofMat = makePS1Material({ color: 0x1c1712 });
     const legMat = makePS1Material({ color: 0x2e2318 });
-    this.legFL = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.1, 5), legMat.clone());
+    const addHoof = (leg: THREE.Mesh) => {
+      const hoof = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.09, 0.24), hoofMat.clone());
+      hoof.position.set(0, -0.56, 0.03);
+      leg.add(hoof);
+    };
+    this.legFL = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.1, 7), legMat.clone());
     this.legFL.position.set(-0.55, 0.55, 0.75);
     this.object.add(this.legFL);
+    this.legs.push(this.legFL);
+    addHoof(this.legFL);
     for (const [sx, sz] of [[0.55, 0.75], [-0.55, -0.75], [0.55, -0.75]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.1, 5), legMat.clone());
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.1, 7), legMat.clone());
       leg.position.set(sx, 0.55, sz);
       this.object.add(leg);
+      this.legs.push(leg);
+      addHoof(leg);
     }
 
     this.headGroup.position.set(0, 1.5, 1.15);
@@ -66,16 +77,36 @@ export class BulwarkMoose extends Enemy {
     this.head.position.z = 0.3;
     this.headGroup.add(this.head);
 
+    // Dark eyes with a glinting highlight either side of the head.
+    const eyeMat = makePS1Material({ color: 0x140f0a });
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xfff0c8 });
+    for (const sx of [-0.19, 0.19]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 5, 4), eyeMat);
+      eye.position.set(sx, 0.06, 0.5);
+      this.headGroup.add(eye);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.016, 4, 3), glintMat);
+      glint.position.set(sx + 0.02, 0.08, 0.53);
+      this.headGroup.add(glint);
+    }
+    // Dark nostrils at the muzzle tip.
+    const nostrilMat = makePS1Material({ color: 0x1a120c });
+    for (const sx of [-0.08, 0.08]) {
+      const nostril = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 3), nostrilMat);
+      nostril.scale.set(1, 0.7, 1);
+      nostril.position.set(sx, -0.08, 0.63);
+      this.headGroup.add(nostril);
+    }
+
     const antlerMat = makePS1Material({ color: 0x8a7a5c });
     for (const side of [-1, 1]) {
-      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.55, 4), antlerMat.clone());
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.55, 6), antlerMat.clone());
       beam.geometry.translate(0, 0.28, 0);
       beam.position.set(side * 0.22, 0.3, 0.35);
       beam.rotation.z = side * 0.5;
       beam.rotation.x = -0.3;
       this.headGroup.add(beam);
       for (const t of [0.4, 0.75]) {
-        const tine = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.03, 0.24, 4), antlerMat.clone());
+        const tine = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.03, 0.24, 6), antlerMat.clone());
         tine.geometry.translate(0, 0.12, 0);
         tine.position.set(side * (0.22 + side * 0.12 * t), 0.28 + t * 0.4, 0.35);
         tine.rotation.z = side * (0.9 + t * 0.4);
@@ -86,7 +117,7 @@ export class BulwarkMoose extends Enemy {
     // Snort puffs: small pale spheres near the muzzle, hidden until telegraph.
     const puffMat = makePS1Material({ color: 0xdedad0 });
     for (const sx of [-0.1, 0.1]) {
-      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.08, 5, 4), puffMat.clone());
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.08, 7, 6), puffMat.clone());
       puff.position.set(sx, -0.05, 0.62);
       puff.visible = false;
       this.headGroup.add(puff);
@@ -104,6 +135,10 @@ export class BulwarkMoose extends Enemy {
     if (this.dead) return;
     this.t += dt;
     this.timer -= dt;
+
+    // Slow chest breathing, always running, low amplitude.
+    const breathe = 1 + Math.sin(this.t * 1.5) * 0.02;
+    this.torso.scale.set(breathe, 1, breathe);
 
     const toPlayer = ctx.playerPos.clone().sub(this.object.position);
     toPlayer.y = 0;

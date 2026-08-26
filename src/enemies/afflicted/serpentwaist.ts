@@ -33,15 +33,28 @@ export class Serpentwaist extends Afflicted {
     this.object.add(this.torso);
 
     const waistMat = makePS1Material({ color: 0x6a5a4a });
-    this.waistJoint = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 5), waistMat);
+    this.waistJoint = new THREE.Mesh(new THREE.SphereGeometry(0.12, 9, 7), waistMat);
     this.waistJoint.position.set(0, 0.5, 0);
     this.object.add(this.waistJoint);
+    // Seam ring: where the graft was never properly closed.
+    const seam = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.012, 4, 8), makePS1Material({ color: 0x2a2016 }));
+    seam.rotation.x = Math.PI / 2;
+    seam.position.set(0, 0.5, 0);
+    this.object.add(seam);
 
     const tailMat = makePS1Material({ color: 0x445a3a });
-    this.tail = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.1, 6), tailMat);
+    this.tail = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.1, 8), tailMat);
     this.tail.position.set(0, 0.25, -0.4);
     this.tail.rotation.x = Math.PI / 2;
     this.object.add(this.tail);
+    // Scale ridge bumps running the length of the tail (local Y = the cone's axis).
+    const scaleMat = makePS1Material({ color: 0x3a4e30 });
+    for (let i = 0; i < 4; i++) {
+      const scale = new THREE.Mesh(new THREE.SphereGeometry(0.03, 5, 4), scaleMat);
+      scale.position.set(0, -0.35 + i * 0.22, 0.16 - i * 0.015);
+      scale.scale.set(1, 1.4, 0.5);
+      this.tail.add(scale);
+    }
 
     this.parts = [
       { tag: 'body', node: this.torso, radius: 0.42, damageMultiplier: 1, weakPoint: false, active: true },

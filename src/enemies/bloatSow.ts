@@ -22,6 +22,8 @@ export class BloatSow extends Enemy {
   private headbuttDidDamage = false;
   private readonly headGroup = new THREE.Group();
   private readonly sacMesh: THREE.Mesh;
+  private readonly earL: THREE.Mesh;
+  private readonly earR: THREE.Mesh;
 
   constructor() {
     super();
@@ -29,40 +31,64 @@ export class BloatSow extends Enemy {
     this.radius = 0.55;
 
     const skinMat = makePS1Material({ color: 0xc98a8a });
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 7, 5), skinMat);
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 9, 7), skinMat);
     body.scale.set(1.1, 0.9, 1.4);
     body.position.set(0, 0.55, -0.1);
     this.object.add(body);
 
     this.headGroup.position.set(0, 0.55, 0.55);
     this.object.add(this.headGroup);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 6, 5), skinMat);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 9, 7), skinMat);
     head.scale.set(1, 0.9, 1.1);
     this.headGroup.add(head);
     const snout = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.13, 0.13, 0.12, 6),
+      new THREE.CylinderGeometry(0.13, 0.13, 0.12, 8),
       makePS1Material({ color: 0xd8a0a0 }),
     );
     snout.rotation.x = Math.PI / 2;
     snout.position.set(0, -0.02, 0.28);
     this.headGroup.add(snout);
-    const earMat = makePS1Material({ color: 0xb87a7a });
-    for (const sx of [-0.18, 0.18]) {
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.16, 4), earMat);
-      ear.position.set(sx, 0.2, 0.05);
-      ear.rotation.z = sx > 0 ? -0.5 : 0.5;
-      this.headGroup.add(ear);
+
+    // Small tusks, curling out from under the snout.
+    const tuskMat = makePS1Material({ color: 0xe8e0d0 });
+    for (const sx of [-0.1, 0.1]) {
+      const tusk = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.09, 4), tuskMat);
+      tusk.rotation.x = Math.PI + 0.5;
+      tusk.position.set(sx, -0.08, 0.32);
+      this.headGroup.add(tusk);
     }
+
+    // Small dark eyes with a glint, sunk either side of the snout.
+    const eyeMat = makePS1Material({ color: 0x1a1414 });
+    const eyeshineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (const sx of [-0.15, 0.15]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 5, 4), eyeMat);
+      eye.position.set(sx, 0.12, 0.22);
+      this.headGroup.add(eye);
+      const shine = new THREE.Mesh(new THREE.SphereGeometry(0.008, 4, 3), eyeshineMat);
+      shine.position.set(sx - 0.008, 0.13, 0.24);
+      this.headGroup.add(shine);
+    }
+
+    const earMat = makePS1Material({ color: 0xb87a7a });
+    this.earL = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.16, 6), earMat);
+    this.earL.position.set(-0.18, 0.2, 0.05);
+    this.earL.rotation.z = 0.5;
+    this.headGroup.add(this.earL);
+    this.earR = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.16, 6), earMat.clone());
+    this.earR.position.set(0.18, 0.2, 0.05);
+    this.earR.rotation.z = -0.5;
+    this.headGroup.add(this.earR);
 
     const legMat = makePS1Material({ color: 0xa06868 });
     for (const [sx, sz] of [[-0.32, 0.4], [0.32, 0.4], [-0.32, -0.55], [0.32, -0.55]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.5, 5), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.5, 8), legMat);
       leg.position.set(sx, 0.25, sz);
       this.object.add(leg);
     }
 
     const sacMat = makePS1Material({ color: 0x6a3050 });
-    this.sacMesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 7, 6), sacMat);
+    this.sacMesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 9, 7), sacMat);
     this.sacMesh.scale.set(1.15, 1.0, 1.0);
     this.sacMesh.position.set(0, 0.65, -0.65);
     this.object.add(this.sacMesh);
@@ -97,6 +123,12 @@ export class BloatSow extends Enemy {
     if (this.state !== 'headbutt' && dist > 0.01) {
       this.object.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
     }
+
+    // Engorged sac breathing, and a lazy ear flop, under whatever the state does.
+    const sacBreathe = 1 + Math.sin(this.t * 2.2) * 0.04;
+    this.sacMesh.scale.set(1.15 * sacBreathe, 1.0 * sacBreathe, 1.0 * sacBreathe);
+    this.earL.rotation.x = Math.sin(this.t * 3.1) * 0.1;
+    this.earR.rotation.x = Math.sin(this.t * 3.1 + 0.5) * 0.1;
 
     switch (this.state) {
       case 'waddle': {

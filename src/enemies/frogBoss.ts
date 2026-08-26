@@ -19,12 +19,14 @@ export class FrogChimera extends Enemy {
   private t = 0;
   private readonly body: THREE.Mesh;
   private readonly jaw: THREE.Mesh;
+  private readonly throatSac: THREE.Mesh;
   private readonly tongueRoot = new THREE.Group();
   private readonly tongueSegs: THREE.Mesh[] = [];
   private readonly bulb: THREE.Mesh;
   private readonly bulbMat: THREE.MeshLambertMaterial;
   private readonly tongueTarget = new THREE.Vector3();
   private readonly hopDir = new THREE.Vector3();
+  private readonly eyePupils: THREE.Mesh[] = [];
   private tongueDidDamage = false;
 
   constructor() {
@@ -33,29 +35,67 @@ export class FrogChimera extends Enemy {
     this.radius = 0.9;
 
     const skin = makePS1Material({ color: 0x4f6b3a });
-    this.body = new THREE.Mesh(new THREE.SphereGeometry(0.85, 8, 6), skin);
+    this.body = new THREE.Mesh(new THREE.SphereGeometry(0.85, 9, 7), skin);
     this.body.scale.set(1.25, 0.85, 1.1);
     this.body.position.y = 0.72;
     this.object.add(this.body);
 
-    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.62, 7, 5), makePS1Material({ color: 0xb9c49a }));
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.62, 9, 7), makePS1Material({ color: 0xb9c49a }));
     belly.scale.set(1.1, 0.7, 0.95);
     belly.position.set(0, 0.5, 0.25);
     this.object.add(belly);
+
+    // Warts scattered across the back — small, subtly darker bumps.
+    const wartMat = makePS1Material({ color: 0x3c5029 });
+    const wartSpots: [number, number, number, number][] = [
+      [-0.42, 1.08, -0.1, 0.07],
+      [0.4, 1.05, -0.18, 0.065],
+      [0, 1.15, -0.35, 0.075],
+      [-0.2, 0.98, 0.15, 0.055],
+    ];
+    for (const [wx, wy, wz, wr] of wartSpots) {
+      const wart = new THREE.Mesh(new THREE.SphereGeometry(wr, 5, 4), wartMat);
+      wart.position.set(wx, wy, wz);
+      this.object.add(wart);
+    }
 
     this.jaw = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.7), makePS1Material({ color: 0x455e33 }));
     this.jaw.position.set(0, 0.42, 0.62);
     this.object.add(this.jaw);
 
+    // Small pale teeth along the jaw's front edge.
+    const toothMat = makePS1Material({ color: 0xdedcc0 });
+    for (const sx of [-0.28, -0.1, 0.1, 0.28]) {
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.05, 4), toothMat);
+      tooth.rotation.x = Math.PI;
+      tooth.position.set(sx, 0.31, 0.94);
+      this.object.add(tooth);
+    }
+
+    // Throat sac — hangs under the jaw and pulses with the croak.
+    this.throatSac = new THREE.Mesh(new THREE.SphereGeometry(0.24, 7, 5), makePS1Material({ color: 0xd68a9a }));
+    this.throatSac.scale.set(1.15, 0.7, 1);
+    this.throatSac.position.set(0, 0.3, 0.55);
+    this.object.add(this.throatSac);
+
     const eyeMat = makePS1Material({ color: 0xd8c840 });
+    const pupilMat = makePS1Material({ color: 0x1a1408 });
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xfff6c0 });
     for (const sx of [-0.42, 0.42]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.17, 6, 4), eyeMat);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), eyeMat);
       eye.position.set(sx, 1.28, 0.45);
       this.object.add(eye);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.075, 6, 5), pupilMat);
+      pupil.position.set(sx, 1.28, 0.58);
+      this.object.add(pupil);
+      this.eyePupils.push(pupil);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.025, 4, 3), glintMat);
+      glint.position.set(sx + 0.03, 1.33, 0.63);
+      this.object.add(glint);
     }
     const legMat = makePS1Material({ color: 0x44582f });
     for (const [sx, sz, ry] of [[-0.8, 0.3, 0.5], [0.8, 0.3, -0.5], [-0.7, -0.5, 2.2], [0.7, -0.5, -2.2]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 0.85, 5), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 0.85, 7), legMat);
       leg.position.set(sx, 0.35, sz);
       leg.rotation.z = ry * 0.35;
       this.object.add(leg);
@@ -66,13 +106,13 @@ export class FrogChimera extends Enemy {
     this.object.add(this.tongueRoot);
     const tongueMat = makePS1Material({ color: 0xc06a7a });
     for (let i = 0; i < TONGUE_SEGMENTS; i++) {
-      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 1, 5), tongueMat);
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 1, 7), tongueMat);
       seg.visible = false;
       this.tongueRoot.add(seg);
       this.tongueSegs.push(seg);
     }
     this.bulbMat = makePS1Material({ color: 0xe8517a });
-    this.bulb = new THREE.Mesh(new THREE.SphereGeometry(0.26, 7, 5), this.bulbMat);
+    this.bulb = new THREE.Mesh(new THREE.SphereGeometry(0.26, 9, 7), this.bulbMat);
     this.bulb.visible = false;
     this.tongueRoot.add(this.bulb);
 
@@ -126,6 +166,18 @@ export class FrogChimera extends Enemy {
     if (this.dead) return;
     this.t += dt;
     this.timer -= dt;
+
+    // Throat-sac pulse: a light idle wobble, swelling hard on the croak.
+    const croakSwell = this.state === 'telegraph' ? 1 - Math.max(0, this.timer) / 0.8 : 0;
+    const throatPulse = 0.5 + 0.5 * Math.sin(this.t * 3.2);
+    this.throatSac.scale.set(
+      1.15 + croakSwell * 0.35,
+      0.7 + throatPulse * 0.05 + croakSwell * 0.55,
+      1 + croakSwell * 0.35,
+    );
+    // Pupils dilate very slightly with the same idle rhythm.
+    const pupilScale = 1 + Math.sin(this.t * 1.6) * 0.04;
+    for (const pupil of this.eyePupils) pupil.scale.setScalar(pupilScale);
 
     const toPlayer = ctx.playerPos.clone().sub(this.object.position);
     toPlayer.y = 0;

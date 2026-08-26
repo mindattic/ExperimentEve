@@ -17,6 +17,7 @@ export class Barnacledad extends Afflicted {
 
   private state: State = 'approach';
   private timer = 0.6 + Math.random();
+  private t = 0;
   private hitDone = false;
   private lungeDir = new THREE.Vector3(0, 0, 1);
   private readonly torso: THREE.Group;
@@ -39,13 +40,17 @@ export class Barnacledad extends Afflicted {
       [-0.1, 0.1, 0.14], [0.12, 0.4, 0.1], [-0.05, 0.44, 0.12],
     ];
     for (const [x, y, z] of spots) {
-      const lump = new THREE.Mesh(new THREE.SphereGeometry(0.07 + Math.random() * 0.03, 5, 4), barnacleMat);
+      const lump = new THREE.Mesh(new THREE.SphereGeometry(0.07 + Math.random() * 0.03, 8, 6), barnacleMat);
       lump.position.set(x, y, z);
       this.torso.add(lump);
+      // Ridged rim: the calcified plate seam every real barnacle wears.
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.008, 4, 7), barnacleMat);
+      rim.position.set(x, y, z + 0.03);
+      this.torso.add(rim);
     }
 
     const heartMat = new THREE.MeshLambertMaterial({ color: 0x8a8a86, emissive: 0x552211, flatShading: true });
-    this.heart = new THREE.Mesh(new THREE.SphereGeometry(0.075, 5, 4), heartMat);
+    this.heart = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), heartMat);
     this.heart.position.set(0.02, 0.28, 0.17);
     this.torso.add(this.heart);
 
@@ -57,7 +62,10 @@ export class Barnacledad extends Afflicted {
   }
 
   protected updateUpright(dt: number, ctx: BattleContext): void {
+    this.t += dt;
     const dist = this.object.position.distanceTo(ctx.playerPos);
+    // The one exposed weak point still beats, faintly, under the crust.
+    this.heart.scale.setScalar(1 + Math.sin(this.t * 2.4) * 0.08);
 
     switch (this.state) {
       case 'approach': {

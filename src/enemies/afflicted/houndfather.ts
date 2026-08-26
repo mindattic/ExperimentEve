@@ -41,17 +41,29 @@ export class Houndfather extends Afflicted {
     this.collar.rotation.x = Math.PI / 2;
     this.collar.position.set(0, 0.56, 0);
     this.torso.add(this.collar);
+    // Tag on the collar: still the old dog's, still jingling.
+    const tag = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.006, 6), makePS1Material({ color: 0xc9a83a }));
+    tag.position.set(0, 0.5, 0.13);
+    this.torso.add(tag);
 
     const legMat = makePS1Material({ color: 0x4a3a2c });
+    const clawMat = makePS1Material({ color: 0x2a2018 });
     for (const s of [-1, 1]) {
       const foreleg = new THREE.Group();
       foreleg.position.set(s * 0.18, 0.55, 0.35);
-      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.4, 5), legMat);
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.4, 8), legMat);
       upper.position.y = -0.15;
       foreleg.add(upper);
       const paw = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.14), legMat);
       paw.position.y = -0.38;
       foreleg.add(paw);
+      // Claws: three stubby cones splayed off the front of the paw.
+      for (let i = -1; i <= 1; i++) {
+        const claw = new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.05, 5), clawMat);
+        claw.rotation.x = Math.PI / 2;
+        claw.position.set(i * 0.03, -0.4, 0.08);
+        foreleg.add(claw);
+      }
       this.object.add(foreleg);
       this.forelegs.push(foreleg);
     }

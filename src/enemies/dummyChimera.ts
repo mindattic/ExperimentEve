@@ -17,6 +17,9 @@ export class RatGullChimera extends Enemy {
   private readonly wingR: THREE.Mesh;
   private readonly eye: THREE.Mesh;
   private readonly eyeMat: THREE.MeshLambertMaterial;
+  private readonly earL: THREE.Mesh;
+  private readonly earR: THREE.Mesh;
+  private readonly beak: THREE.Mesh;
   private readonly lungeDir = new THREE.Vector3();
   private t = 0;
 
@@ -26,7 +29,7 @@ export class RatGullChimera extends Enemy {
     this.radius = 0.45;
 
     this.body = new THREE.Mesh(
-      new THREE.SphereGeometry(0.4, 7, 5),
+      new THREE.SphereGeometry(0.4, 9, 6),
       makePS1Material({ color: 0x5a4a42 }),
     );
     this.body.scale.set(1.15, 0.8, 1.3);
@@ -34,7 +37,7 @@ export class RatGullChimera extends Enemy {
     this.object.add(this.body);
 
     const tail = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.03, 0.012, 0.5, 4),
+      new THREE.CylinderGeometry(0.03, 0.012, 0.5, 7),
       makePS1Material({ color: 0xc0a0a0 }),
     );
     tail.position.set(0, 0.3, -0.55);
@@ -49,9 +52,41 @@ export class RatGullChimera extends Enemy {
     this.object.add(this.wingL, this.wingR);
 
     this.eyeMat = makePS1Material({ color: 0xffcc44 });
-    this.eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 4), this.eyeMat);
+    this.eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), this.eyeMat);
     this.eye.position.set(0, 0.5, 0.45);
     this.object.add(this.eye);
+
+    // Ratty ears and a gull's beak nub — flanking the glowing weak-eye.
+    const earMat = makePS1Material({ color: 0x453a34 });
+    this.earL = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 6), earMat);
+    this.earL.position.set(-0.16, 0.62, 0.12);
+    this.earL.rotation.z = 0.3;
+    this.earR = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 6), earMat.clone());
+    this.earR.position.set(0.16, 0.62, 0.12);
+    this.earR.rotation.z = -0.3;
+    this.object.add(this.earL, this.earR);
+
+    const beakMat = makePS1Material({ color: 0xd9a63c });
+    this.beak = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.22, 6), beakMat);
+    this.beak.rotation.x = Math.PI / 2;
+    this.beak.position.set(0, 0.42, 0.52);
+    this.object.add(this.beak);
+
+    // Two beady rat eyes flanking the true (glowing) gull-eye weak point.
+    const beadyMat = new THREE.MeshBasicMaterial({ color: 0x0a0806 });
+    for (const sx of [-0.14, 0.14]) {
+      const beady = new THREE.Mesh(new THREE.SphereGeometry(0.03, 5, 4), beadyMat);
+      beady.position.set(sx, 0.44, 0.42);
+      this.object.add(beady);
+    }
+
+    // Webbed gull feet under the rat belly.
+    const footMat = makePS1Material({ color: 0xc98a3c });
+    for (const sx of [-0.14, 0.14]) {
+      const foot = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.06, 6), footMat.clone());
+      foot.position.set(sx, 0.03, 0.05);
+      this.object.add(foot);
+    }
 
     this.parts = [
       { tag: 'body', node: this.body, radius: 0.45, damageMultiplier: 1, weakPoint: false, active: true },
@@ -75,6 +110,11 @@ export class RatGullChimera extends Enemy {
     const toPlayer = ctx.playerPos.clone().sub(this.object.position);
     toPlayer.y = 0;
     const dist = toPlayer.length();
+
+    // Ear twitch and beak bob — small idle flavor, always running.
+    this.earL.rotation.x = Math.sin(this.t * 5) * 0.12;
+    this.earR.rotation.x = Math.sin(this.t * 5 + 0.6) * 0.12;
+    this.beak.position.y = 0.42 + Math.sin(this.t * 3.2) * 0.01;
 
     switch (this.state) {
       case 'approach': {

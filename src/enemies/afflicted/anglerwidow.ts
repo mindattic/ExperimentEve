@@ -36,19 +36,31 @@ export class Anglerwidow extends Afflicted {
     this.jaw = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.1), makePS1Material({ color: AFFLICTED_SKIN }));
     this.jaw.position.set(0, 1.51, 0.1);
     this.object.add(this.jaw);
+    // Needle teeth: too many, and too fine, for a human mouth.
+    const teethMat = makePS1Material({ color: 0xece4d8 });
+    for (let i = -1; i <= 1; i++) {
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.008, 0.03, 4), teethMat);
+      tooth.rotation.x = Math.PI;
+      tooth.position.set(i * 0.025, -0.02, 0.045);
+      this.jaw.add(tooth);
+    }
 
     // Stalk + lure: the fake lamp. Bobs forever, lit even when she's calm.
-    const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.02, 0.32, 4), makePS1Material({ color: 0x2e2a30 }));
+    const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.02, 0.32, 7), makePS1Material({ color: 0x2e2a30 }));
     stalk.position.set(0, 1.86, 0.14);
     stalk.rotation.x = -0.6;
     this.object.add(stalk);
 
     this.lure = new THREE.Mesh(
-      new THREE.SphereGeometry(0.07, 6, 5),
+      new THREE.SphereGeometry(0.07, 9, 7),
       makePS1Material({ color: 0xffdd88, emissive: 0xffaa33 }),
     );
     this.lure.position.set(0, 2.04, 0.32);
     this.object.add(this.lure);
+    // The glint that sells the lie from across the street.
+    const glint = new THREE.Mesh(new THREE.SphereGeometry(0.02, 5, 4), new THREE.MeshBasicMaterial({ color: 0xffffee }));
+    glint.position.set(0.03, 2.06, 0.36);
+    this.object.add(glint);
 
     this.parts = [
       { tag: 'body', node: torso, radius: 0.3, damageMultiplier: 1, weakPoint: false, active: true },

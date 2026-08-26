@@ -57,30 +57,59 @@ export class HiveBear extends Enemy {
     this.torso.position.y = 1.1;
     this.object.add(this.torso);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 7, 5), furMat.clone());
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 9, 7), furMat.clone());
     head.position.set(0, 1.95, 0.55);
     this.object.add(head);
-    const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.35, 5), furMat.clone());
+    const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.35, 7), furMat.clone());
     snout.rotation.x = Math.PI / 2;
     snout.position.set(0, 1.85, 0.9);
     this.object.add(snout);
 
+    // Small dark eyes with a glinting highlight.
+    const eyeMat = makePS1Material({ color: 0x120d08 });
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffdca0 });
+    for (const sx of [-0.17, 0.17]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 5, 4), eyeMat);
+      eye.position.set(sx, 1.98, 0.87);
+      this.object.add(eye);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.014, 4, 3), glintMat);
+      glint.position.set(sx + 0.015, 2.0, 0.9);
+      this.object.add(glint);
+    }
+
+    // Bared teeth at the snout's front edge.
+    const toothMat = makePS1Material({ color: 0xe9e2c8 });
+    for (const sx of [-0.06, 0.06]) {
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.07, 5), toothMat);
+      tooth.rotation.x = Math.PI;
+      tooth.position.set(sx, 1.68, 1.03);
+      this.object.add(tooth);
+    }
+
     const legMat = makePS1Material({ color: 0x2c2018 });
     for (const [sx, sz] of [[-0.5, 0.5], [0.5, 0.5], [-0.5, -0.5], [0.5, -0.5]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 1.0, 5), legMat.clone());
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 1.0, 7), legMat.clone());
       leg.position.set(sx, 0.5, sz);
       this.object.add(leg);
     }
 
     this.armPivot.position.set(0.75, 1.65, 0.2);
     this.object.add(this.armPivot);
-    this.arm = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.1, 5), furMat.clone());
+    this.arm = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.1, 7), furMat.clone());
     this.arm.geometry.translate(0, -0.55, 0);
     this.armPivot.add(this.arm);
+    const clawR = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.14, 6), makePS1Material({ color: 0x1c1712 }));
+    clawR.rotation.x = Math.PI;
+    clawR.position.set(0, -1.08, 0.05);
+    this.armPivot.add(clawR);
 
-    this.armLOther = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.1, 5), furMat.clone());
+    this.armLOther = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.1, 7), furMat.clone());
     this.armLOther.position.set(-0.75, 1.1, 0.2);
     this.object.add(this.armLOther);
+    const clawL = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.14, 6), makePS1Material({ color: 0x1c1712 }));
+    clawL.rotation.x = Math.PI;
+    clawL.position.set(-0.75, 0.53, 0.25);
+    this.object.add(clawL);
 
     // Hive grown into the chest: two hinged plates over a glowing core.
     const hiveMat = makePS1Material({ color: 0xc9a86a });
@@ -91,13 +120,13 @@ export class HiveBear extends Enemy {
     this.hivePlateR.position.set(0.2, 1.15, 0.78);
     this.object.add(this.hivePlateR);
     this.hiveCoreMat = makePS1Material({ color: 0x8a5a1a });
-    this.hiveCore = new THREE.Mesh(new THREE.SphereGeometry(0.24, 6, 5), this.hiveCoreMat);
+    this.hiveCore = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 6), this.hiveCoreMat);
     this.hiveCore.position.set(0, 1.15, 0.75);
     this.object.add(this.hiveCore);
 
     const waspMat = makePS1Material({ color: 0x151515 });
     for (let i = 0; i < WASP_COUNT; i++) {
-      const wasp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 5, 4), waspMat.clone());
+      const wasp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 5), waspMat.clone());
       this.waspCloudGroup.add(wasp);
       this.waspSpheres.push(wasp);
     }
@@ -124,6 +153,10 @@ export class HiveBear extends Enemy {
     this.t += dt;
     this.timer -= dt;
     this.roarCooldown -= dt;
+
+    // Heavy, slow chest breathing — always running, low amplitude.
+    const breathe = 1 + Math.sin(this.t * 1.2) * 0.02;
+    this.torso.scale.set(breathe, 1, breathe);
 
     const toPlayer = ctx.playerPos.clone().sub(this.object.position);
     toPlayer.y = 0;
@@ -156,6 +189,7 @@ export class HiveBear extends Enemy {
     switch (this.state) {
       case 'lumber': {
         if (dist > 0.01) this.object.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
+        this.armLOther.rotation.z = Math.sin(this.t * 1.5) * 0.04;
         if (this.roarCooldown <= 0) {
           this.state = 'roarTelegraph';
           this.timer = ROAR_TELEGRAPH_TIME;

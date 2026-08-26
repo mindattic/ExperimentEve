@@ -23,6 +23,8 @@ export class HushFox extends Enemy {
   private readonly eyeL: THREE.Mesh;
   private readonly eyeMat: THREE.MeshLambertMaterial;
   private readonly tail: THREE.Mesh;
+  private readonly earTuftL: THREE.Mesh;
+  private readonly earTuftR: THREE.Mesh;
 
   constructor() {
     super();
@@ -30,34 +32,60 @@ export class HushFox extends Enemy {
     this.radius = 0.4;
 
     const furMat = makePS1Material({ color: 0xb5502a });
-    this.bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 7, 5), furMat);
+    this.bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 9, 7), furMat);
     this.bodyMesh.scale.set(1, 0.85, 1.5);
     this.bodyMesh.position.set(0, 0.32, 0);
     this.object.add(this.bodyMesh);
 
     // Owl facial disc grafted where a fox muzzle would be.
     const disc = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.22, 0.22, 0.06, 8),
+      new THREE.CylinderGeometry(0.22, 0.22, 0.06, 9),
       makePS1Material({ color: 0xd8c090 }),
     );
     disc.rotation.x = Math.PI / 2;
     disc.position.set(0, 0.4, 0.42);
     this.object.add(disc);
 
+    // Hooked owl beak, centered low on the disc.
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.09, 6), makePS1Material({ color: 0x2a2420 }));
+    beak.rotation.x = Math.PI / 2 + 0.4;
+    beak.position.set(0, 0.33, 0.5);
+    this.object.add(beak);
+
+    // A fox fang or two, just visible past the beak.
+    const fangMat = makePS1Material({ color: 0xe8e0c8 });
+    for (const sx of [-0.03, 0.03]) {
+      const fang = new THREE.Mesh(new THREE.ConeGeometry(0.01, 0.035, 4), fangMat);
+      fang.rotation.x = Math.PI;
+      fang.position.set(sx, 0.28, 0.48);
+      this.object.add(fang);
+    }
+
     this.eyeMat = makePS1Material({ color: 0xf0d020 });
-    this.eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), this.eyeMat);
+    this.eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 9, 7), this.eyeMat);
     this.eyeL.position.set(-0.09, 0.42, 0.46);
     this.object.add(this.eyeL);
-    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), this.eyeMat);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 9, 7), this.eyeMat);
     eyeR.position.set(0.09, 0.42, 0.46);
     this.object.add(eyeR);
 
     const earMat = makePS1Material({ color: 0x8a3a1c });
     for (const sx of [-0.14, 0.14]) {
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 4), earMat);
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 6), earMat);
       ear.position.set(sx, 0.58, 0.2);
       this.object.add(ear);
     }
+
+    // Owl-style ear tufts, feathered points above the eyes.
+    const tuftMat = makePS1Material({ color: 0x6a3315 });
+    this.earTuftL = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.1, 4), tuftMat);
+    this.earTuftL.position.set(-0.13, 0.56, 0.42);
+    this.earTuftL.rotation.z = 0.25;
+    this.object.add(this.earTuftL);
+    this.earTuftR = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.1, 4), tuftMat.clone());
+    this.earTuftR.position.set(0.13, 0.56, 0.42);
+    this.earTuftR.rotation.z = -0.25;
+    this.object.add(this.earTuftR);
 
     const wingMat = makePS1Material({ color: 0x6a4020 });
     for (const side of [-1, 1]) {
@@ -69,15 +97,20 @@ export class HushFox extends Enemy {
 
     const legMat = makePS1Material({ color: 0x8a3a1c });
     for (const [sx, sz] of [[-0.15, 0.3], [0.15, 0.3], [-0.15, -0.3], [0.15, -0.3]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.32, 4), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.32, 7), legMat);
       leg.position.set(sx, 0.16, sz);
       this.object.add(leg);
     }
 
-    this.tail = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.6, 5), furMat);
+    this.tail = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.6, 7), furMat);
     this.tail.rotation.x = Math.PI / 2 + 0.3;
     this.tail.position.set(0, 0.3, -0.55);
     this.object.add(this.tail);
+
+    // White-tipped tail marking, at the cone's wide (far) end.
+    const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 5), makePS1Material({ color: 0xe8e4d8 }));
+    tailTip.position.set(0, -0.27, 0);
+    this.tail.add(tailTip);
 
     this.parts = [
       { tag: 'body', node: this.bodyMesh, radius: 0.35, damageMultiplier: 1, weakPoint: false, active: true },
@@ -99,6 +132,12 @@ export class HushFox extends Enemy {
     eyesPart.active = this.state === 'eyeGlint' || this.state === 'pounce';
     this.eyeMat.emissive.setHex(eyesPart.active ? 0xffee66 : 0x000000);
     this.eyeMat.emissiveIntensity = eyesPart.active ? 1.2 : 0;
+
+    // Idle ear-tuft twitch and breathing, layered under whatever the state does.
+    this.earTuftL.rotation.x = Math.sin(this.t * 2.6) * 0.08;
+    this.earTuftR.rotation.x = Math.sin(this.t * 2.6 + 0.7) * 0.08;
+    const breathe = 1 + Math.sin(this.t * 3.4) * 0.03;
+    this.bodyMesh.scale.set(breathe, 0.85 * breathe, 1.5 * breathe);
 
     switch (this.state) {
       case 'circle': {

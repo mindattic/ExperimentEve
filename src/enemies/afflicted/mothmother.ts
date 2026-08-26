@@ -45,13 +45,33 @@ export class Mothmother extends Afflicted {
 
     const moteMat = makePS1Material({ color: 0x9a9284 });
     for (let i = 0; i < 6; i++) {
-      const mote = new THREE.Mesh(new THREE.SphereGeometry(0.05, 4, 3), moteMat);
+      const mote = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), moteMat);
       const ang = (i / 6) * Math.PI * 2;
       mote.position.set(Math.cos(ang) * 0.5, 0.5, Math.sin(ang) * 0.5 - 0.2);
       mote.scale.setScalar(0.001);
       torso.add(mote);
       this.motes.push(mote);
     }
+
+    // Antennae: feathery, always trembling toward whatever's brightest.
+    const antennaMat = makePS1Material({ color: 0x4a3e2e });
+    for (const s of [-1, 1]) {
+      const antenna = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.16, 5), antennaMat);
+      antenna.position.set(s * 0.05, 0.72, 0.06);
+      antenna.rotation.x = -0.5;
+      antenna.rotation.z = s * 0.3;
+      torso.add(antenna);
+    }
+    // Wing eye-spots: the pattern moths wear to look like something watching back.
+    const spotMat = makePS1Material({ color: 0x3a3024 });
+    const spotL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.01, 8), spotMat);
+    spotL.rotation.x = Math.PI / 2;
+    spotL.position.set(-0.05, 0, -0.15);
+    this.wingL.add(spotL);
+    const spotR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.01, 8), spotMat.clone());
+    spotR.rotation.x = Math.PI / 2;
+    spotR.position.set(0.05, 0, -0.15);
+    this.wingR.add(spotR);
 
     this.parts = [
       { tag: 'body', node: torso, radius: 0.42, damageMultiplier: 1, weakPoint: false, active: true },
@@ -77,6 +97,9 @@ export class Mothmother extends Afflicted {
         const aim = ctx.playerPos.clone().add(this.driftOffset);
         this.shamble(dt, aim);
         for (const mote of this.motes) mote.scale.setScalar(0.001);
+        // Too heavy to lift, but never quite still: a slow, dragging sway.
+        this.wingL.rotation.x = 0.55 + Math.sin(this.t * 1.3) * 0.03;
+        this.wingR.rotation.x = 0.55 + Math.sin(this.t * 1.3 + 0.4) * 0.03;
         if (dist < 2.4 && this.timer <= 0) {
           this.state = 'heave';
           this.timer = 0.8;

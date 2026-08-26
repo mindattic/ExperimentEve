@@ -65,10 +65,12 @@ const DUSK = {
   fog: new THREE.Color(0x261a2e), hemiI: 1.7,
   moonColor: new THREE.Color(0xffb070), moonI: 0.7,
 };
+// Night ambient sits LOW so the street lamps get to do the lighting —
+// pools of sodium light with real dark between them, not a flat wash.
 const NIGHT = {
   sky: new THREE.Color(0x9aa8c8), ground: new THREE.Color(0x2a201c),
-  fog: new THREE.Color(0x0a0a12), hemiI: 1.35,
-  moonColor: new THREE.Color(0xbfd0ff), moonI: 0.45,
+  fog: new THREE.Color(0x0a0a12), hemiI: 0.82,
+  moonColor: new THREE.Color(0xbfd0ff), moonI: 0.55,
 };
 function applyTimeOfDay(): void {
   const k = Math.min(1, Math.max(0, (worldClock.darkness - 0.35) / 0.65));
@@ -183,12 +185,19 @@ placeModels(scene, [
   { name: 'city-pack/Pizza Corner', x: -18, z: -2, ry: Math.PI / 2, fit: 9 },
 ]);
 
-// Street lamps: two sound ones and a dying one over the protest field.
+// Street lamps: real in-scene light sources doing the night's lighting —
+// pools along every street, and a dying one over the protest field.
 const flickerLamp = buildStreetLamp();
 flickerLamp.group.position.set(-5.2, 0, 1);
 flickerLamp.group.rotation.y = Math.PI;
 scene.add(flickerLamp.group);
-for (const [lx, lz, ry] of [[2.5, -2.5, Math.PI], [-2.5, 14, 0]] as const) {
+for (const [lx, lz, ry] of [
+  [2.5, -2.5, Math.PI], [-2.5, 14, 0], // originals
+  [3.5, 27, Math.PI], [-3.5, 8, 0], // street A, north + south ends
+  [6, 31.5, -Math.PI / 2], // over the tracks stair
+  [3.5, -8, Math.PI], [-3.5, -14.5, 0], // south street pools
+  [10, -19.5, 0], // corridor mouth by the blockade
+] as const) {
   const lamp2 = buildStreetLamp();
   lamp2.group.position.set(lx, 0, lz);
   lamp2.group.rotation.y = ry;
@@ -386,6 +395,7 @@ function rollCatAllies(): void {
       if (target.dead) return;
       const dealt = target.takeHit(state.gunDamage * 6, null); // guaranteed crit
       target.stun(1.8);
+      battle.noteHit(target);
       dmgNumbers.spawn(target.object.position.clone().add(new THREE.Vector3(0, 1.2, 0)), dealt, true);
       hud.message(`The ${coat} cat strikes — ${dealt}!`);
       state.addLimit(dealt * 0.3);
@@ -1242,6 +1252,7 @@ function frame(): void {
         const dealt = e.takeHit(15, null);
         hud.message(`Rammed — ${dealt}.`);
         state.addLimit(dealt * 0.4);
+        if (!e.dead) battle.noteHit(e);
       }
     }
   }

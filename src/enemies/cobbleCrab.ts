@@ -39,6 +39,8 @@ export class CobbleCrab extends Enemy {
   private readonly plateR: THREE.Mesh;
   private readonly eyeL: THREE.Mesh;
   private readonly eyeR: THREE.Mesh;
+  private readonly eyeStalkL: THREE.Mesh;
+  private readonly eyeStalkR: THREE.Mesh;
   private readonly legs: THREE.Mesh[] = [];
   private readonly clawL: THREE.Mesh;
   private readonly clawR: THREE.Mesh;
@@ -74,18 +76,37 @@ export class CobbleCrab extends Enemy {
     this.plateR.position.set(0.33, 0.28, 0);
     this.crabGroup.add(this.plateR);
 
+    const eyeStalkMat = makePS1Material({ color: 0x3f7a44 });
+    this.eyeStalkL = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.14, 6), eyeStalkMat);
+    this.eyeStalkL.position.set(-0.14, 0.46, 0.38);
+    this.eyeStalkL.rotation.x = -0.3;
+    this.crabGroup.add(this.eyeStalkL);
+    this.eyeStalkR = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.14, 6), eyeStalkMat.clone());
+    this.eyeStalkR.position.set(0.14, 0.46, 0.38);
+    this.eyeStalkR.rotation.x = -0.3;
+    this.crabGroup.add(this.eyeStalkR);
+
     const eyeMat = makePS1Material({ color: 0x222222 });
-    this.eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 5, 4), eyeMat);
+    this.eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), eyeMat);
     this.eyeL.position.set(-0.14, 0.5, 0.4);
     this.crabGroup.add(this.eyeL);
-    this.eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.05, 5, 4), eyeMat.clone());
+    this.eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), eyeMat.clone());
     this.eyeR.position.set(0.14, 0.5, 0.4);
     this.crabGroup.add(this.eyeR);
+
+    // A couple of rubble-camouflage bumps stuck to the top plate.
+    const bumpMat = makePS1Material({ color: 0x5a5a52 });
+    const bump1 = new THREE.Mesh(new THREE.SphereGeometry(0.08, 5, 4), bumpMat);
+    bump1.position.set(-0.18, 0.53, -0.15);
+    this.crabGroup.add(bump1);
+    const bump2 = new THREE.Mesh(new THREE.SphereGeometry(0.06, 5, 4), bumpMat.clone());
+    bump2.position.set(0.2, 0.52, 0.1);
+    this.crabGroup.add(bump2);
 
     const legMat = makePS1Material({ color: 0x2f5c34 });
     for (let i = 0; i < 6; i++) {
       const side = i < 3 ? -1 : 1;
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.5, 4), legMat.clone());
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.5, 7), legMat.clone());
       leg.position.set(side * 0.36, 0.2, -0.24 + (i % 3) * 0.24);
       leg.rotation.z = side * 1.1;
       this.crabGroup.add(leg);
@@ -101,6 +122,15 @@ export class CobbleCrab extends Enemy {
     this.clawR.geometry.translate(0, 0, 0.22);
     this.clawR.position.set(0.32, 0.32, 0.28);
     this.crabGroup.add(this.clawR);
+
+    // Pincer tips, a small point at the front of each claw.
+    const pincerMat = makePS1Material({ color: 0x3a6e40 });
+    for (const claw of [this.clawL, this.clawR]) {
+      const pincer = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 4), pincerMat);
+      pincer.rotation.x = Math.PI / 2;
+      pincer.position.set(0, 0, 0.5);
+      claw.add(pincer);
+    }
 
     this.object.add(this.crabGroup);
 
@@ -120,6 +150,8 @@ export class CobbleCrab extends Enemy {
     this.bodyShell.scale.setScalar(0.6 + k * 0.4);
     this.eyeL.scale.setScalar(0.2 + k * 0.8);
     this.eyeR.scale.setScalar(0.2 + k * 0.8);
+    this.eyeStalkL.scale.y = 0.2 + k * 0.8;
+    this.eyeStalkR.scale.y = 0.2 + k * 0.8;
     for (const leg of this.legs) leg.scale.y = 0.2 + k * 0.8;
   }
 
@@ -141,6 +173,12 @@ export class CobbleCrab extends Enemy {
     this.flipRotX += (flipTarget - this.flipRotX) * Math.min(1, dt * 6);
     this.crabGroup.rotation.x = this.flipRotX;
     undersidePart.active = this.state === 'flipped';
+
+    // Idle eyestalk sway while unfolded, layered under whatever the state does.
+    if (this.state !== 'camouflaged' && this.state !== 'unfold') {
+      this.eyeStalkL.rotation.z = Math.sin(this.t * 2.4) * 0.08 - 0.02;
+      this.eyeStalkR.rotation.z = Math.sin(this.t * 2.4 + 0.9) * 0.08 + 0.02;
+    }
 
     switch (this.state) {
       case 'camouflaged': {

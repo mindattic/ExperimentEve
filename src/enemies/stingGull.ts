@@ -23,7 +23,10 @@ export class StingGull extends Enemy {
   private readonly headMesh: THREE.Mesh;
   private readonly bellMesh: THREE.Mesh;
   private readonly bellMat: THREE.MeshLambertMaterial;
+  private readonly bellCore: THREE.Mesh;
+  private readonly bellCoreMat: THREE.MeshBasicMaterial;
   private readonly tendrils: THREE.Mesh[] = [];
+  private readonly wings: THREE.Mesh[] = [];
 
   constructor() {
     super();
@@ -32,14 +35,26 @@ export class StingGull extends Enemy {
     this.object.position.y = FLOAT_Y;
 
     const featherMat = makePS1Material({ color: 0xd8d4c8 });
-    this.headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 5), featherMat);
+    this.headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.14, 9, 7), featherMat);
     this.headMesh.position.set(0, 0.28, 0.1);
     this.object.add(this.headMesh);
 
-    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 4), makePS1Material({ color: 0xd8a030 }));
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 6), makePS1Material({ color: 0xd8a030 }));
     beak.rotation.x = Math.PI / 2;
     beak.position.set(0, 0.27, 0.24);
     this.object.add(beak);
+
+    // Beady gull eyes with a glint of eyeshine.
+    const eyeMat = makePS1Material({ color: 0x1a1a1a });
+    const eyeshineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (const sx of [-0.06, 0.06]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.025, 5, 4), eyeMat);
+      eye.position.set(sx, 0.32, 0.21);
+      this.object.add(eye);
+      const shine = new THREE.Mesh(new THREE.SphereGeometry(0.007, 4, 3), eyeshineMat);
+      shine.position.set(sx - 0.006, 0.33, 0.225);
+      this.object.add(shine);
+    }
 
     const wingMat = makePS1Material({ color: 0xb8b4a8 });
     for (const side of [-1, 1]) {
@@ -48,17 +63,25 @@ export class StingGull extends Enemy {
       wing.position.set(0, 0.2, 0);
       wing.rotation.z = side * 0.15;
       this.object.add(wing);
+      this.wings.push(wing);
     }
 
     this.bellMat = makePS1Material({ color: 0x9ac8d8 });
-    this.bellMesh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 7, 5), this.bellMat);
+    this.bellMesh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 9, 7), this.bellMat);
     this.bellMesh.scale.set(1, 0.75, 1);
     this.object.add(this.bellMesh);
+
+    // Bioluminescent core glowing faintly inside the bell.
+    this.bellCoreMat = new THREE.MeshBasicMaterial({
+      color: 0x8ae0ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending,
+    });
+    this.bellCore = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), this.bellCoreMat);
+    this.bellMesh.add(this.bellCore);
 
     const tendrilMat = makePS1Material({ color: 0x7ab0c0 });
     for (let i = 0; i < TENDRIL_COUNT; i++) {
       const a = (i / TENDRIL_COUNT) * Math.PI * 2;
-      const tendril = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 1.3, 3), tendrilMat);
+      const tendril = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 1.3, 6), tendrilMat);
       tendril.geometry.translate(0, -0.65, 0);
       tendril.position.set(Math.cos(a) * 0.15, -0.15, Math.sin(a) * 0.15);
       this.object.add(tendril);
@@ -90,6 +113,18 @@ export class StingGull extends Enemy {
     toPlayer.y = 0;
     const dist = toPlayer.length();
     if (dist > 0.01) this.object.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
+
+    // Idle wing flap, tendril drift-sway, and core pulse — layered under state logic.
+    const flap = Math.sin(this.t * 3) * 0.06;
+    for (let i = 0; i < this.wings.length; i++) {
+      const side = i === 0 ? -1 : 1;
+      this.wings[i]!.rotation.z = side * 0.15 + flap * side;
+    }
+    for (let i = 0; i < this.tendrils.length; i++) {
+      this.tendrils[i]!.rotation.x = Math.sin(this.t * 1.6 + i * 1.7) * 0.05;
+      this.tendrils[i]!.rotation.z = Math.cos(this.t * 1.4 + i * 2.1) * 0.05;
+    }
+    this.bellCoreMat.opacity = 0.4 + Math.sin(this.t * 4) * 0.15;
 
     const bellPart = this.parts[1]!;
     bellPart.active = this.state === 'swellTelegraph' || this.state === 'dischargeDip';

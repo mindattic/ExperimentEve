@@ -35,19 +35,31 @@ export class Crabwife extends Afflicted {
     this.object.add(torso);
 
     const clawMat = makePS1Material({ color: 0xa8412e });
+    const jointMat = makePS1Material({ color: 0x8a3020 });
     for (const s of [-1, 1]) {
       const claw = new THREE.Group();
       claw.position.set(s * 0.3, 1.05, 0.02);
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.7, 5), clawMat);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.7, 8), clawMat);
       arm.position.y = -0.35;
       claw.add(arm);
+      // Knuckle joint: the seam where borrowed anatomy meets its own.
+      const knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.075, 6, 5), jointMat);
+      knuckle.position.y = -0.68;
+      claw.add(knuckle);
       const pincer = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.28), clawMat);
       pincer.position.y = -0.78;
       claw.add(pincer);
-      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.22, 4), clawMat);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.22, 7), clawMat);
       tip.position.set(0, -0.78, 0.2);
       tip.rotation.x = Math.PI / 2;
       claw.add(tip);
+      // Serrated ridge along the pincer's inner edge.
+      for (const t of [-1, 1]) {
+        const serration = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.06, 5), clawMat);
+        serration.rotation.x = Math.PI / 2;
+        serration.position.set(0, -0.78, t * 0.09 + 0.14);
+        claw.add(serration);
+      }
       this.object.add(claw);
       this.claws.push(claw);
       this.pincers.push(pincer);

@@ -22,6 +22,7 @@ export class CrowSpider extends Enemy {
   private readonly giant: boolean;
   private readonly scaleK: number;
   private readonly bodyGroup = new THREE.Group();
+  private readonly abdomen: THREE.Mesh;
   private readonly wingL: THREE.Mesh;
   private readonly wingR: THREE.Mesh;
   private readonly legs: THREE.Mesh[] = [];
@@ -37,29 +38,55 @@ export class CrowSpider extends Enemy {
     this.radius = 0.5 * this.scaleK;
 
     const bodyMat = makePS1Material({ color: opts.flaming ? 0x3a2820 : 0x2e2a30 });
-    const abdomen = new THREE.Mesh(new THREE.SphereGeometry(0.32, 7, 5), bodyMat);
-    abdomen.scale.set(1, 0.8, 1.35);
-    abdomen.position.set(0, 0.42, -0.15);
-    this.bodyGroup.add(abdomen);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 4), bodyMat);
+    this.abdomen = new THREE.Mesh(new THREE.SphereGeometry(0.32, 9, 7), bodyMat);
+    this.abdomen.scale.set(1, 0.8, 1.35);
+    this.abdomen.position.set(0, 0.42, -0.15);
+    this.bodyGroup.add(this.abdomen);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), bodyMat);
     head.position.set(0, 0.38, 0.32);
     this.bodyGroup.add(head);
+
+    // Primary red eyes (with a glint) plus a smaller secondary pair — an
+    // eight-eyed cluster reads as unmistakably arachnid up close.
     const eyeMat = makePS1Material({ color: 0xcc3333 });
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffb0b0 });
     for (const sx of [-0.07, 0.07]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 4, 3), eyeMat);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 5), eyeMat);
       eye.position.set(sx, 0.44, 0.47);
+      this.bodyGroup.add(eye);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.014, 4, 3), glintMat);
+      glint.position.set(sx + 0.014, 0.46, 0.5);
+      this.bodyGroup.add(glint);
+    }
+    for (const sx of [-0.11, 0.11]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.024, 4, 3), eyeMat.clone());
+      eye.position.set(sx, 0.41, 0.44);
       this.bodyGroup.add(eye);
     }
 
+    // Curved mandibles/fangs beneath the head.
+    const fangMat = makePS1Material({ color: 0x151318 });
+    for (const sx of [-0.06, 0.06]) {
+      const fang = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.1, 5), fangMat);
+      fang.rotation.x = Math.PI * 0.85;
+      fang.position.set(sx, 0.3, 0.4);
+      this.bodyGroup.add(fang);
+    }
+
     const legMat = makePS1Material({ color: 0x232026 });
+    const jointMat = makePS1Material({ color: 0x2c2830 });
     for (let i = 0; i < 8; i++) {
       const side = i < 4 ? -1 : 1;
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.035, 0.75, 4), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.035, 0.75, 6), legMat);
       const zOff = -0.35 + (i % 4) * 0.22;
       leg.position.set(side * 0.38, 0.28, zOff);
       leg.rotation.z = side * 1.05;
       this.bodyGroup.add(leg);
       this.legs.push(leg);
+      // Knuckle joint riding partway down each leg — cheap, follows the gait.
+      const joint = new THREE.Mesh(new THREE.SphereGeometry(0.032, 5, 4), jointMat.clone());
+      joint.position.set(0, -0.2, 0);
+      leg.add(joint);
     }
 
     // Crow wings: dark feathered boxes, folded until the telegraph.
@@ -75,7 +102,7 @@ export class CrowSpider extends Enemy {
     if (opts.flaming) {
       const flameMat = new THREE.MeshLambertMaterial({ color: 0x331100, emissive: 0xff7722 });
       for (const [fx, fy, fz] of [[-0.2, 0.62, -0.3], [0.22, 0.58, 0.05], [0, 0.7, -0.05]] as const) {
-        const flame = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 4), flameMat);
+        const flame = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 6), flameMat);
         flame.position.set(fx, fy, fz);
         this.bodyGroup.add(flame);
       }
@@ -85,7 +112,7 @@ export class CrowSpider extends Enemy {
     this.object.add(this.bodyGroup);
 
     this.parts = [
-      { tag: 'body', node: abdomen, radius: 0.42 * this.scaleK, damageMultiplier: 1, weakPoint: false, active: true },
+      { tag: 'body', node: this.abdomen, radius: 0.42 * this.scaleK, damageMultiplier: 1, weakPoint: false, active: true },
       { tag: 'wing joint', node: this.wingL, radius: 0.22 * this.scaleK, damageMultiplier: 4, weakPoint: true, active: false },
     ];
     this.registerFlashMaterials();
@@ -95,6 +122,10 @@ export class CrowSpider extends Enemy {
     if (this.dead) return;
     this.t += dt;
     this.timer -= dt;
+
+    // Idle abdomen breathing, always running, low amplitude.
+    const breathe = 1 + Math.sin(this.t * 2.6) * 0.03;
+    this.abdomen.scale.set(1 * breathe, 0.8 * breathe, 1.35 * breathe);
 
     const toPlayer = ctx.playerPos.clone().sub(this.object.position);
     toPlayer.y = 0;
@@ -106,10 +137,11 @@ export class CrowSpider extends Enemy {
     // Wing joint targetable while the wings are doing anything.
     this.parts[1]!.active = this.state === 'flutter' || this.state === 'leap' || this.state === 'slamWindup';
 
-    // Legs skitter whenever grounded and moving.
+    // Legs skitter whenever grounded and moving, plus a constant tiny
+    // idle jitter so it never looks fully static even when still.
     const gait = this.state === 'approach' ? Math.sin(this.t * 16) * 0.25 : 0;
     this.legs.forEach((leg, i) => {
-      leg.rotation.x = (i % 2 === 0 ? gait : -gait);
+      leg.rotation.x = (i % 2 === 0 ? gait : -gait) + Math.sin(this.t * 5 + i * 1.3) * 0.03;
     });
 
     switch (this.state) {
@@ -197,8 +229,10 @@ export class CrowSpider extends Enemy {
   }
 
   private foldWings(dt: number): void {
-    this.wingL.rotation.z += (0.12 - this.wingL.rotation.z) * Math.min(1, dt * 6);
-    this.wingR.rotation.z += (-0.12 - this.wingR.rotation.z) * Math.min(1, dt * 6);
+    // Folded wings still quiver very slightly — never fully dead-still.
+    const quiver = Math.sin(this.t * 2.3) * 0.04;
+    this.wingL.rotation.z += (0.12 + quiver - this.wingL.rotation.z) * Math.min(1, dt * 6);
+    this.wingR.rotation.z += (-0.12 - quiver - this.wingR.rotation.z) * Math.min(1, dt * 6);
     this.bodyGroup.rotation.x *= Math.max(0, 1 - dt * 6);
     this.bodyGroup.position.y = 0;
   }

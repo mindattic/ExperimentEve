@@ -39,6 +39,28 @@ export abstract class Enemy {
   private hurtFlash = 0;
   private flashables: THREE.MeshLambertMaterial[] = [];
 
+  // ---- learned weaknesses: weak points glow only once she's drawn blood --
+  weaknessRevealed = false;
+  private weakGlowT = Math.random() * 10;
+  private weakGlowMats: THREE.MeshLambertMaterial[] = [];
+
+  /**
+   * First hit teaches: from then on every weak-point part pulses hot so the
+   * player can aim at what they've learned. Idempotent; re-collects parts
+   * (so tumors grown later glow too).
+   */
+  revealWeakness(): void {
+    this.weaknessRevealed = true;
+    this.weakGlowMats = [];
+    for (const p of this.parts) {
+      if (!p.weakPoint) continue;
+      p.node.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.MeshLambertMaterial | undefined;
+        if (m?.isMeshLambertMaterial) this.weakGlowMats.push(m);
+      });
+    }
+  }
+
   // ---- stun: sustained rapid damage (or a crit) staggers anything --------
   private stunTimer = 0;
   private recentDamage = 0;
@@ -112,6 +134,8 @@ export abstract class Enemy {
     this.object.add(node);
     this.parts.push({ tag: 'tumor', node, radius: 0.22, damageMultiplier: 4, weakPoint: true, active: true });
     this.registerFlashMaterials();
+    // A grown tumor announces itself — that's the whole point of growing it.
+    this.revealWeakness();
   }
 
   protected onDeath(): void {
@@ -123,12 +147,18 @@ export abstract class Enemy {
   /** Runs on gameDt — frozen during the ATB pause. */
   abstract updateBattle(gameDt: number, ctx: BattleContext): void;
 
-  /** Runs on realDt — hurt flash decay etc. */
+  /** Runs on realDt — hurt flash decay, weak-point glow. */
   updateAlways(realDt: number): void {
     if (this.hurtFlash > 0) {
       this.hurtFlash -= realDt;
       const on = this.hurtFlash > 0 && Math.floor(this.hurtFlash * 30) % 2 === 0;
       for (const m of this.flashables) m.emissive.setHex(on ? 0x883333 : 0x000000);
+    }
+    // Learned weak points pulse hot — written after the flash so it wins.
+    if (this.weaknessRevealed && !this.dead && this.weakGlowMats.length > 0) {
+      this.weakGlowT += realDt;
+      const k = 0.45 + Math.sin(this.weakGlowT * 6) * 0.3;
+      for (const m of this.weakGlowMats) m.emissive.setRGB(k, k * 0.45, k * 0.12);
     }
   }
 }

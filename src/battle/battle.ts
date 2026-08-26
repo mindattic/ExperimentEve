@@ -147,9 +147,27 @@ export class BattleSystem {
     return this.enemies.filter((e) => !e.dead);
   }
 
+  /**
+   * Player damage landed on this enemy: first blood reveals its weak points
+   * (they glow from here on), and the species goes in Kat's mental bestiary
+   * — next time, they glow on sight. Learning IS the progression.
+   */
+  noteHit(e: Enemy): void {
+    if (e.weaknessRevealed) return;
+    e.revealWeakness();
+    const weak = e.parts.find((p) => p.weakPoint && p.tag !== 'tumor');
+    if (weak && this.state.learnWeakness(e.displayName)) {
+      this.onMessage?.(`Something catches the light — the ${weak.tag}. She'll remember that.`);
+    }
+  }
+
   start(enemies: Enemy[]): void {
     this.setLetterbox(true);
     this.enemies = enemies;
+    // Species she's fought before: their weak points glow on sight.
+    for (const e of enemies) {
+      if (this.state.knownWeaknesses.includes(e.displayName)) e.revealWeakness();
+    }
     for (const e of enemies) {
       if (!e.object.parent) this.scene.add(e.object);
     }
@@ -424,6 +442,7 @@ export class BattleSystem {
                       this.state.addLimit(dealt * 0.3);
                       hits++;
                       if (e.dead) this.onMessage?.(`${e.displayName} burns down.`);
+                      else this.noteHit(e);
                     }
                   }
                   this.onMessage?.(`The bottle gets to be a protest again. ${hits} caught in the fire.`);
@@ -449,6 +468,7 @@ export class BattleSystem {
                     this.state.addLimit(dealt * 0.3);
                     hits++;
                     if (e.dead) this.onMessage?.(`${e.displayName} is painted over. Permanently.`);
+                    else this.noteHit(e);
                   }
                 }
                 this.onMessage?.(`A cone of burning paint. ${hits} hit.`);
@@ -471,6 +491,7 @@ export class BattleSystem {
                   this.onMessage?.(`The axe lands — ${dealt}.`);
                   this.state.addLimit(dealt * 0.5);
                   if (target.dead) this.onMessage?.(`${target.displayName} is destroyed.`);
+                  else this.noteHit(target);
                 }
                 this.meleePending = true;
                 this.beginFire(0.8); // rooted longer than a shot
@@ -738,6 +759,7 @@ export class BattleSystem {
     }
     s.addLimit(dealt * 0.6);
     if (t.enemy.dead) this.onMessage?.(`${t.enemy.displayName} is destroyed.`);
+    else this.noteHit(t.enemy);
     this.pendingCrit = 'none';
     this.spendTurn();
   }
@@ -782,6 +804,7 @@ export class BattleSystem {
     if (!t.enemy.dead && t.enemy.stunned) this.onMessage?.(`${t.enemy.displayName} is staggered!`);
     s.addLimit(total * 0.6);
     if (t.enemy.dead) this.onMessage?.(`${t.enemy.displayName} is destroyed.`);
+    else if (hits > 0) this.noteHit(t.enemy);
     this.pendingCrit = 'none';
     this.spendTurn();
   }

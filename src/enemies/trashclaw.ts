@@ -23,6 +23,8 @@ export class Trashclaw extends Enemy {
   private readonly pincerR: THREE.Mesh;
   private readonly tail: THREE.Mesh;
   private readonly bodyMesh: THREE.Mesh;
+  private readonly antennaL: THREE.Mesh;
+  private readonly antennaR: THREE.Mesh;
   private readonly lungeDir = new THREE.Vector3();
   private slamHit = false;
 
@@ -32,7 +34,7 @@ export class Trashclaw extends Enemy {
     this.radius = 0.5;
 
     const furMat = makePS1Material({ color: 0x4a4640 });
-    this.bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.42, 7, 5), furMat);
+    this.bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.42, 9, 6), furMat);
     this.bodyMesh.scale.set(1.1, 0.9, 1.3);
     this.bodyMesh.position.y = 0.42;
     this.bodyGroup.add(this.bodyMesh);
@@ -48,20 +50,53 @@ export class Trashclaw extends Enemy {
     mask.position.set(0, 0.5, 0.58);
     this.bodyGroup.add(mask);
 
+    // Beady raccoon eyes peering out from the mask.
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1410 });
+    for (const sx of [-0.1, 0.1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 5, 4), eyeMat);
+      eye.position.set(sx, 0.52, 0.63);
+      this.bodyGroup.add(eye);
+    }
+
+    // Lobster antennae sprouting from the carapace, just above the mask.
+    const antennaMat = makePS1Material({ color: 0x6a2416 });
+    this.antennaL = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.015, 0.3, 5), antennaMat);
+    this.antennaL.position.set(-0.1, 0.66, 0.5);
+    this.antennaL.rotation.x = -0.5;
+    this.antennaL.rotation.z = 0.15;
+    this.antennaR = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.015, 0.3, 5), antennaMat.clone());
+    this.antennaR.position.set(0.1, 0.66, 0.5);
+    this.antennaR.rotation.x = -0.5;
+    this.antennaR.rotation.z = -0.15;
+    this.bodyGroup.add(this.antennaL, this.antennaR);
+
     const ringMat = makePS1Material({ color: 0xc9a24a });
-    this.tail = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.05, 0.7, 5), ringMat);
+    this.tail = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.05, 0.7, 8), ringMat);
     this.tail.position.set(0, 0.32, -0.55);
     this.tail.rotation.x = Math.PI / 2 - 0.25;
     this.bodyGroup.add(this.tail);
+
+    // Dark bands ringing the tail — the raccoon half showing through.
+    const bandMat = makePS1Material({ color: 0x241f1a });
+    for (const k of [0.35, 0.65]) {
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.016, 4, 8), bandMat.clone());
+      band.rotation.x = Math.PI / 2;
+      band.position.y = THREE.MathUtils.lerp(-0.32, 0.32, k);
+      this.tail.add(band);
+    }
 
     const armMat = makePS1Material({ color: 0x9a3a26 });
     const pincerMat = makePS1Material({ color: 0xb04a30 });
     const buildClaw = (side: number): { arm: THREE.Group; pincer: THREE.Mesh } => {
       const arm = new THREE.Group();
       arm.position.set(side * 0.42, 0.55, 0.2);
-      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.4, 5), armMat);
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.4, 8), armMat);
       upper.position.set(0, -0.2, 0);
       arm.add(upper);
+      // Elbow joint bulge where the lobster forearm meets the pincer.
+      const joint = new THREE.Mesh(new THREE.SphereGeometry(0.1, 7, 5), armMat);
+      joint.position.set(0, -0.41, 0);
+      arm.add(joint);
       const pincer = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.4, 1, 1, 1), pincerMat);
       pincer.position.set(0, -0.42, 0.15);
       arm.add(pincer);
@@ -77,7 +112,7 @@ export class Trashclaw extends Enemy {
 
     const legMat = makePS1Material({ color: 0x3a3630 });
     for (const [sx, sz] of [[-0.28, 0.25], [0.28, 0.25], [-0.24, -0.3], [0.24, -0.3]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.4, 4), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.4, 7), legMat);
       leg.position.set(sx, 0.2, sz);
       this.bodyGroup.add(leg);
     }
@@ -113,6 +148,13 @@ export class Trashclaw extends Enemy {
     const tailPart = this.parts[1]!;
     bodyPart.flatDamageOverride = this.state === 'exposed' ? undefined : 1;
     tailPart.active = this.state === 'exposed';
+
+    // Antenna twitch and a slow breathing bulge — always running underneath
+    // whatever the state machine is doing to the body.
+    this.antennaL.rotation.z = 0.15 + Math.sin(this.t * 4) * 0.1;
+    this.antennaR.rotation.z = -0.15 - Math.sin(this.t * 4 + 0.4) * 0.1;
+    const breathe = 1 + Math.sin(this.t * 2.2) * 0.03;
+    this.bodyMesh.scale.set(1.1 * breathe, 0.9 * breathe, 1.3 * breathe);
 
     switch (this.state) {
       case 'approach': {

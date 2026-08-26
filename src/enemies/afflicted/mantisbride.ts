@@ -41,19 +41,38 @@ export class Mantisbride extends Afflicted {
     this.object.add(skirt);
 
     const armMat = makePS1Material({ color: 0x4a5a3a });
-    this.armL = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.5, 4), armMat);
+    const spikeMat = makePS1Material({ color: 0x2e3a24 });
+    this.armL = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.5, 7), armMat);
     this.armL.position.set(-0.12, 1.05, 0.22);
     this.armL.rotation.set(Math.PI / 2.3, 0, 0.5);
     this.torso.add(this.armL);
-    this.armR = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.5, 4), armMat.clone());
+    this.armR = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.5, 7), armMat.clone());
     this.armR.position.set(0.12, 1.05, 0.22);
     this.armR.rotation.set(Math.PI / 2.3, 0, -0.5);
     this.torso.add(this.armR);
+    // Raptorial barbs: the row of spines that make the fold look like prayer.
+    for (const arm of [this.armL, this.armR]) {
+      for (let i = 0; i < 3; i++) {
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.05, 4), spikeMat);
+        spike.position.set(0.045, -0.15 + i * 0.13, 0);
+        spike.rotation.z = -Math.PI / 2.4;
+        arm.add(spike);
+      }
+    }
 
     const bouquetMat = makePS1Material({ color: 0xcc6688 });
-    this.bouquet = new THREE.Mesh(new THREE.SphereGeometry(0.08, 5, 4), bouquetMat);
+    this.bouquet = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), bouquetMat);
     this.bouquet.position.set(0, 1.02, 0.4);
     this.torso.add(this.bouquet);
+    // Wilted leaves peeking from the bouquet — the last living green on her.
+    const leafMat = makePS1Material({ color: 0x4a6a3a });
+    for (const s of [-1, 1]) {
+      const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.09, 5), leafMat);
+      leaf.position.set(s * 0.05, 1.0, 0.36);
+      leaf.rotation.x = Math.PI / 2.5;
+      leaf.rotation.z = s * 0.4;
+      this.torso.add(leaf);
+    }
 
     this.parts = [
       { tag: 'body', node: this.torso, radius: 0.4, damageMultiplier: 1, weakPoint: false, active: true },
@@ -66,6 +85,8 @@ export class Mantisbride extends Afflicted {
     this.t += dt;
     const dist = this.object.position.distanceTo(ctx.playerPos);
     this.parts[1]!.active = this.state === 'telegraph' || this.state === 'pause';
+    // The bouquet trembles faintly — the one part of her still gripping something.
+    this.bouquet.rotation.y = Math.sin(this.t * 2.2) * 0.15;
 
     switch (this.state) {
       case 'wait': {

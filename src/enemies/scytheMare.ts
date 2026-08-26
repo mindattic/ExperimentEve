@@ -28,6 +28,10 @@ export class ScytheMare extends Enemy {
   private readonly wingCaseGroup = new THREE.Group();
   private readonly wingCaseL: THREE.Mesh;
   private readonly wingCaseR: THREE.Mesh;
+  private readonly earL: THREE.Mesh;
+  private readonly earR: THREE.Mesh;
+  private readonly mandibleL: THREE.Mesh;
+  private readonly mandibleR: THREE.Mesh;
 
   constructor() {
     super();
@@ -43,13 +47,47 @@ export class ScytheMare extends Enemy {
     head.position.set(0, 1.55, 1.15);
     this.object.add(head);
 
+    // Horse ears, still very much a horse under the chitin.
+    const earMat = makePS1Material({ color: 0x2c1e18 });
+    this.earL = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 5), earMat);
+    this.earL.position.set(-0.12, 1.85, 1.1);
+    this.earL.rotation.z = 0.15;
+    this.object.add(this.earL);
+    this.earR = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 5), earMat.clone());
+    this.earR.position.set(0.12, 1.85, 1.1);
+    this.earR.rotation.z = -0.15;
+    this.object.add(this.earR);
+
+    // Eyes with a glint, dead center of the horse-box skull.
+    const eyeMat = makePS1Material({ color: 0x1a1a14 });
+    const eyeshineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (const sx of [-0.16, 0.16]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 5), eyeMat);
+      eye.position.set(sx, 1.6, 1.42);
+      this.object.add(eye);
+      const shine = new THREE.Mesh(new THREE.SphereGeometry(0.012, 4, 3), eyeshineMat);
+      shine.position.set(sx - 0.012, 1.62, 1.45);
+      this.object.add(shine);
+    }
+
+    // Mantis mandibles, grafted below the horse muzzle.
+    const mandibleMat = makePS1Material({ color: 0x4a5a2a });
+    this.mandibleL = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.14, 4), mandibleMat);
+    this.mandibleL.rotation.x = Math.PI / 2 + 0.3;
+    this.mandibleL.position.set(-0.08, 1.35, 1.45);
+    this.object.add(this.mandibleL);
+    this.mandibleR = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.14, 4), mandibleMat.clone());
+    this.mandibleR.rotation.x = Math.PI / 2 - 0.3;
+    this.mandibleR.position.set(0.08, 1.35, 1.45);
+    this.object.add(this.mandibleR);
+
     const mane = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 1.3, 1, 1, 1), makePS1Material({ color: 0x1c140f }));
     mane.position.set(0, 1.65, 0.5);
     this.object.add(mane);
 
     const legMat = makePS1Material({ color: 0x2c2018 });
     for (const [sx, sz] of [[-0.4, 0.8], [0.4, 0.8], [-0.4, -0.8], [0.4, -0.8]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.15, 1.0, 5), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.15, 1.0, 8), legMat);
       leg.position.set(sx, 0.5, sz);
       this.object.add(leg);
     }
@@ -64,7 +102,7 @@ export class ScytheMare extends Enemy {
     this.armR.position.set(0.4, 1.1, 1.0);
     this.object.add(this.armR);
     for (const arm of [this.armL, this.armR]) {
-      const blade = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.5, 4), armMat);
+      const blade = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.5, 7), armMat);
       blade.rotation.x = -Math.PI / 2;
       blade.position.set(0, 0, -1.0);
       arm.add(blade);
@@ -95,6 +133,13 @@ export class ScytheMare extends Enemy {
     const toPlayer = ctx.playerPos.clone().sub(this.object.position);
     toPlayer.y = 0;
     const dist = toPlayer.length();
+
+    // Idle ear twitch and mandible click, layered under whatever the state does.
+    this.earL.rotation.x = Math.sin(this.t * 2.3) * 0.1;
+    this.earR.rotation.x = Math.sin(this.t * 2.3 + 0.6) * 0.1;
+    const mandibleTwitch = (Math.sin(this.t * 2.7) * 0.5 + 0.5) * 0.06;
+    this.mandibleL.rotation.z = -mandibleTwitch;
+    this.mandibleR.rotation.z = mandibleTwitch;
 
     const wingCasePart = this.parts[1]!;
     wingCasePart.active =

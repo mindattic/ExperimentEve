@@ -21,10 +21,13 @@ export class SteepleBat extends Enemy {
   private t = 0;
   private angle = Math.random() * Math.PI * 2;
   private readonly bodyGroup = new THREE.Group();
+  private readonly body: THREE.Mesh;
   private readonly head: THREE.Mesh;
   private readonly headMat: THREE.MeshLambertMaterial;
   private readonly wingL: THREE.Mesh;
   private readonly wingR: THREE.Mesh;
+  private readonly earL: THREE.Mesh;
+  private readonly earR: THREE.Mesh;
   private readonly diveStart = new THREE.Vector3();
   private readonly diveEnd = new THREE.Vector3();
   private diveDidDamage = false;
@@ -37,16 +40,39 @@ export class SteepleBat extends Enemy {
     this.radius = 0.4;
 
     const furMat = makePS1Material({ color: 0x2a2630 });
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.26, 6, 5), furMat);
-    body.scale.set(1, 0.9, 1.3);
-    this.bodyGroup.add(body);
+    this.body = new THREE.Mesh(new THREE.SphereGeometry(0.26, 9, 6), furMat);
+    this.body.scale.set(1, 0.9, 1.3);
+    this.bodyGroup.add(this.body);
+
+    // Bat ears — the one part of the silhouette still purely bat.
+    const earMat = makePS1Material({ color: 0x201c26 });
+    this.earL = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.18, 6), earMat);
+    this.earL.position.set(-0.12, 0.22, 0.08);
+    this.earL.rotation.z = 0.25;
+    this.earR = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.18, 6), earMat.clone());
+    this.earR.position.set(0.12, 0.22, 0.08);
+    this.earR.rotation.z = -0.25;
+    this.bodyGroup.add(this.earL, this.earR);
 
     // Moray eel head grafted where the bat's snout should be.
     this.headMat = makePS1Material({ color: 0x4a5a3a });
-    this.head = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 6), this.headMat);
+    this.head = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 8), this.headMat);
     this.head.rotation.x = Math.PI / 2;
     this.head.position.set(0, -0.02, 0.42);
     this.bodyGroup.add(this.head);
+
+    // Tiny glinting eel eyes and a row of needle teeth at the maw tip.
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xdff0c0 });
+    for (const sx of [-0.06, 0.06]) {
+      const eelEye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 5, 4), eyeMat);
+      eelEye.position.set(sx, 0.03, 0.2);
+      this.head.add(eelEye);
+    }
+    const toothMat = makePS1Material({ color: 0xe8e4d0 });
+    const teeth = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.07, 5), toothMat);
+    teeth.rotation.x = Math.PI / 2;
+    teeth.position.set(0, -0.02, -0.24);
+    this.head.add(teeth);
 
     const wingMat = makePS1Material({ color: 0x1c1a22 });
     this.wingL = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.03, 0.5, 3, 1, 1), wingMat);
@@ -57,9 +83,20 @@ export class SteepleBat extends Enemy {
     this.wingR.position.set(0.12, 0, -0.05);
     this.bodyGroup.add(this.wingL, this.wingR);
 
+    // Clawed wing-finger tips, riding the wingtips through every flap.
+    const clawMat = makePS1Material({ color: 0x100e14 });
+    const wingClawL = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.14, 5), clawMat);
+    wingClawL.rotation.z = Math.PI / 2;
+    wingClawL.position.set(-1.08, 0, 0.02);
+    this.wingL.add(wingClawL);
+    const wingClawR = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.14, 5), clawMat.clone());
+    wingClawR.rotation.z = -Math.PI / 2;
+    wingClawR.position.set(1.08, 0, 0.02);
+    this.wingR.add(wingClawR);
+
     const legMat = makePS1Material({ color: 0x25222a });
     for (const sx of [-0.12, 0.12]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.22, 4), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.22, 7), legMat);
       leg.position.set(sx, -0.2, -0.15);
       this.bodyGroup.add(leg);
     }
@@ -68,7 +105,7 @@ export class SteepleBat extends Enemy {
     this.object.add(this.bodyGroup);
 
     this.parts = [
-      { tag: 'body', node: body, radius: 0.35, damageMultiplier: 1, weakPoint: false, active: true },
+      { tag: 'body', node: this.body, radius: 0.35, damageMultiplier: 1, weakPoint: false, active: true },
       { tag: 'maw', node: this.head, radius: 0.22, damageMultiplier: 4, weakPoint: true, active: false },
     ];
     this.registerFlashMaterials();
@@ -86,6 +123,12 @@ export class SteepleBat extends Enemy {
     const mawPart = this.parts[1]!;
     mawPart.active = this.state === 'chirpTelegraph' || this.state === 'dive';
     this.headMat.emissive.setHex(mawPart.active ? 0x99cc44 : 0x000000);
+
+    // Breathing bulge and ear twitch — always running underneath the state.
+    const breathe = 1 + Math.sin(this.t * 3) * 0.04;
+    this.body.scale.set(breathe, 0.9 * breathe, 1.3 * breathe);
+    this.earL.rotation.x = Math.sin(this.t * 4.5) * 0.15;
+    this.earR.rotation.x = Math.sin(this.t * 4.5 + 0.5) * 0.15;
 
     switch (this.state) {
       case 'circle': {

@@ -30,11 +30,20 @@ export class Gantrylegs extends Afflicted {
 
     const clothes = pickClothes(Math.floor(Math.random() * 1000));
     const legMat = makePS1Material({ color: 0x8a7355 });
+    const jointMat = makePS1Material({ color: 0x6a5a40 });
     for (const s of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, HIP_Y, 5), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, HIP_Y, 8), legMat);
       leg.position.set(s * 0.16, HIP_Y / 2, 0);
       this.object.add(leg);
       this.legs.push(leg);
+      // Knee-height knob: the joint that shouldn't bend this way and does.
+      const knee = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 5), jointMat);
+      knee.position.set(s * 0.16, HIP_Y * 0.55, 0);
+      this.object.add(knee);
+      // Splayed foot pad at ground level, wide enough to (barely) balance on.
+      const foot = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.1, 6), legMat);
+      foot.position.set(s * 0.16, 0.05, 0.02);
+      this.object.add(foot);
     }
 
     this.hinge.position.set(0, HIP_Y, 0);

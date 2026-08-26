@@ -6,19 +6,25 @@ import type { BattleContext } from '../enemyBase';
 type State = 'strafe' | 'telegraph' | 'recover';
 
 /** Crab legs from the waist down: he was never built to walk forward again. */
-function buildCrabLegs(): THREE.Group {
+function buildCrabLegs(outLegs: THREE.Mesh[]): THREE.Group {
   const g = new THREE.Group();
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.26, 6, 4), makePS1Material({ color: 0x3a4a3a }));
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.26, 9, 7), makePS1Material({ color: 0x3a4a3a }));
   shell.scale.set(1.3, 0.55, 1.1);
   shell.position.y = 0.32;
   g.add(shell);
   const legMat = makePS1Material({ color: 0x2c3a2c });
+  const jointMat = makePS1Material({ color: 0x1e2a1e });
   for (let i = 0; i < 6; i++) {
     const side = i < 3 ? -1 : 1;
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.5, 4), legMat);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.5, 7), legMat);
     leg.position.set(side * 0.32, 0.2, -0.18 + (i % 3) * 0.18);
     leg.rotation.z = side * 1.1;
     g.add(leg);
+    outLegs.push(leg);
+    // Knuckle where the leg bends toward the ground.
+    const joint = new THREE.Mesh(new THREE.SphereGeometry(0.03, 5, 4), jointMat);
+    joint.position.set(0, -0.24, 0);
+    leg.add(joint);
   }
   return g;
 }
@@ -34,8 +40,10 @@ export class Togglecrab extends Afflicted {
   private timer = 0.6 + Math.random() * 0.6;
   private sideSign: 1 | -1 = Math.random() < 0.5 ? -1 : 1;
   private toggleTimer = 2 + Math.random() * 2;
+  private t = 0;
   private readonly torso: THREE.Group;
   private readonly head: THREE.Mesh;
+  private readonly legs: THREE.Mesh[] = [];
 
   constructor() {
     super();
@@ -46,7 +54,7 @@ export class Togglecrab extends Afflicted {
     const clothes = pickClothes(23);
     this.torso = buildTorso(clothes);
     this.torso.position.y = 0.5;
-    const legs = buildCrabLegs();
+    const legs = buildCrabLegs(this.legs);
     this.object.add(legs, this.torso);
 
     this.head = this.torso.children[1] as THREE.Mesh;
@@ -63,7 +71,13 @@ export class Togglecrab extends Afflicted {
   }
 
   protected updateUpright(dt: number, ctx: BattleContext): void {
+    this.t += dt;
     const distPlayer = this.object.position.distanceTo(ctx.playerPos);
+    // Scuttle: legs on each side skitter out of phase, never in a clean gait.
+    this.legs.forEach((leg, i) => {
+      const side = i < 3 ? -1 : 1;
+      leg.rotation.x = Math.sin(this.t * 10 + i * 1.4) * 0.12 * side;
+    });
 
     switch (this.state) {
       case 'strafe': {

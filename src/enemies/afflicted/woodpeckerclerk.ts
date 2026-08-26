@@ -13,6 +13,7 @@ export class Woodpeckerclerk extends Afflicted {
 
   private state: State = 'shamble';
   private timer = 0.8 + Math.random();
+  private t = 0;
   private peckIndex = 0;
   private peckTimer = 0;
   private readonly torso: THREE.Group;
@@ -36,10 +37,21 @@ export class Woodpeckerclerk extends Afflicted {
     tie.position.set(0, 1.28, 0.17);
     this.object.add(tie);
 
-    this.bill = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.24, 5), makePS1Material({ color: 0xd9c98a }));
+    this.bill = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.24, 7), makePS1Material({ color: 0xd9c98a }));
     this.bill.rotation.x = Math.PI / 2;
     this.bill.position.set(0, 1.59, 0.22);
     this.object.add(this.bill);
+    // Nostril groove and a red feather crest — still trying to look presentable.
+    const nostril = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.05), makePS1Material({ color: 0x8a7a4a }));
+    nostril.position.set(0, 0.01, 0.06);
+    this.bill.add(nostril);
+    const crestMat = makePS1Material({ color: 0xb02a2a });
+    for (let i = 0; i < 2; i++) {
+      const crest = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.06, 5), crestMat);
+      crest.position.set((i - 0.5) * 0.03, 1.69, 0.03);
+      crest.rotation.x = -0.4;
+      this.object.add(crest);
+    }
 
     this.parts = [
       { tag: 'body', node: this.torso, radius: 0.32, damageMultiplier: 1, weakPoint: false, active: true },
@@ -49,12 +61,15 @@ export class Woodpeckerclerk extends Afflicted {
   }
 
   protected updateUpright(dt: number, ctx: BattleContext): void {
+    this.t += dt;
     const dist = this.object.position.distanceTo(ctx.playerPos);
     this.parts[1]!.active = this.state === 'reach' || this.state === 'dizzy';
 
     switch (this.state) {
       case 'shamble': {
         this.shamble(dt, ctx.playerPos);
+        // Small habitual head-cock, like he's still listening for a phone.
+        this.head.rotation.z = Math.sin(this.t * 2.6) * 0.04;
         this.timer -= dt;
         if (dist < 1.2 && this.timer <= 0) {
           this.state = 'reach';

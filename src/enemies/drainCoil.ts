@@ -31,6 +31,7 @@ export class DrainCoil extends Enemy {
   private readonly mound: THREE.Mesh;
   private readonly snakeGroup = new THREE.Group();
   private readonly bodySeg: THREE.Mesh;
+  private readonly tailSeg: THREE.Mesh;
   private readonly mouthRing: THREE.Mesh;
   private readonly mouthMat: THREE.MeshLambertMaterial;
 
@@ -43,30 +44,51 @@ export class DrainCoil extends Enemy {
     this.radius = 0.4;
 
     const dirtMat = makePS1Material({ color: 0x5a4632 });
-    this.mound = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.28, 6), dirtMat);
+    this.mound = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.28, 8), dirtMat);
     this.mound.position.y = 0.05;
     this.object.add(this.mound);
 
     const scaleMat = makePS1Material({ color: 0x5c7248 });
-    this.bodySeg = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.6, 6), scaleMat);
+    this.bodySeg = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.6, 8), scaleMat);
     this.bodySeg.rotation.x = Math.PI / 2;
     this.bodySeg.position.set(0, 0.2, -0.1);
     this.snakeGroup.add(this.bodySeg);
 
-    const tailSeg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, 0.5, 6), scaleMat.clone());
-    tailSeg.rotation.x = Math.PI / 2;
-    tailSeg.position.set(0, 0.16, -0.55);
-    this.snakeGroup.add(tailSeg);
+    this.tailSeg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, 0.5, 8), scaleMat.clone());
+    this.tailSeg.rotation.x = Math.PI / 2;
+    this.tailSeg.position.set(0, 0.16, -0.55);
+    this.snakeGroup.add(this.tailSeg);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), scaleMat.clone());
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 9, 7), scaleMat.clone());
     head.position.set(0, 0.24, 0.32);
     this.snakeGroup.add(head);
 
+    // Small dark eyes with a glint, set into the head.
+    const eyeMat = makePS1Material({ color: 0x141410 });
+    const eyeshineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (const sx of [-0.08, 0.08]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 5, 4), eyeMat);
+      eye.position.set(sx, 0.29, 0.4);
+      this.snakeGroup.add(eye);
+      const shine = new THREE.Mesh(new THREE.SphereGeometry(0.008, 4, 3), eyeshineMat);
+      shine.position.set(sx - 0.008, 0.3, 0.42);
+      this.snakeGroup.add(shine);
+    }
+
     this.mouthMat = makePS1Material({ color: 0x8a3050 });
-    this.mouthRing = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 8), this.mouthMat);
+    this.mouthRing = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 9), this.mouthMat);
     this.mouthRing.rotation.x = Math.PI / 2;
     this.mouthRing.position.set(0, 0.24, 0.44);
     this.snakeGroup.add(this.mouthRing);
+
+    // Concentric lamprey teeth ringing the mouth's inner rim.
+    const toothMat = makePS1Material({ color: 0xd8c8b0 });
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.035, 4), toothMat);
+      tooth.position.set(Math.cos(a) * 0.1, Math.sin(a) * 0.1, 0.02);
+      this.mouthRing.add(tooth);
+    }
 
     this.snakeGroup.visible = false;
     this.object.add(this.snakeGroup);
@@ -97,6 +119,12 @@ export class DrainCoil extends Enemy {
 
     const bodyPart = this.parts[0]!;
     const mouthPart = this.parts[1]!;
+
+    // Idle slither sway while the coil is above ground, layered under the state logic.
+    if (this.snakeGroup.visible) {
+      this.bodySeg.rotation.z = Math.sin(this.t * 5) * 0.06;
+      this.tailSeg.rotation.z = Math.sin(this.t * 5 + 0.8) * 0.09;
+    }
 
     switch (this.state) {
       case 'lurk': {

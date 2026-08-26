@@ -29,9 +29,11 @@ export class DartSquirrel extends Enemy {
   private readonly travelDir = new THREE.Vector3();
 
   private readonly critterGroup = new THREE.Group();
+  private readonly bodyMesh: THREE.Mesh;
   private readonly abdomen: THREE.Mesh;
   private readonly wingL: THREE.Mesh;
   private readonly wingR: THREE.Mesh;
+  private readonly ears: THREE.Mesh[] = [];
 
   constructor() {
     super();
@@ -39,40 +41,68 @@ export class DartSquirrel extends Enemy {
     this.radius = 0.25;
 
     const furMat = makePS1Material({ color: 0x8a7a63 });
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), furMat);
-    body.scale.set(1, 0.9, 1.3);
-    body.position.y = 0.2;
-    this.critterGroup.add(body);
+    this.bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), furMat);
+    this.bodyMesh.scale.set(1, 0.9, 1.3);
+    this.bodyMesh.position.y = 0.2;
+    this.critterGroup.add(this.bodyMesh);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), furMat.clone());
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), furMat.clone());
     head.position.set(0, 0.24, 0.2);
     this.critterGroup.add(head);
 
     const earMat = furMat.clone();
     for (const sx of [-0.06, 0.06]) {
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.06, 4), earMat);
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.06, 6), earMat);
       ear.position.set(sx, 0.33, 0.22);
       this.critterGroup.add(ear);
+      this.ears.push(ear);
     }
 
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.4, 5), furMat.clone());
+    // Beady eyes with a glinting highlight — tiny, but they read at PSX-HD.
+    const eyeMat = makePS1Material({ color: 0x1a1410 });
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xfff6d8 });
+    for (const sx of [-0.045, 0.045]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.022, 5, 4), eyeMat);
+      eye.position.set(sx, 0.27, 0.28);
+      this.critterGroup.add(eye);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.008, 4, 3), glintMat);
+      glint.position.set(sx + 0.008, 0.28, 0.295);
+      this.critterGroup.add(glint);
+    }
+
+    // Tiny front paw-claws, tucked under the chin.
+    const clawMat = furMat.clone();
+    for (const sx of [-0.07, 0.07]) {
+      const claw = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.05, 5), clawMat);
+      claw.rotation.x = Math.PI * 0.6;
+      claw.position.set(sx, 0.1, 0.2);
+      this.critterGroup.add(claw);
+    }
+
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.4, 7), furMat.clone());
     tail.rotation.x = Math.PI * 0.55;
     tail.position.set(0, 0.3, -0.28);
     this.critterGroup.add(tail);
 
     // Grafted wasp abdomen: striped, glossy — the weak point.
     const abdomenMat = makePS1Material({ color: 0xd8b31a });
-    this.abdomen = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 5), abdomenMat);
+    this.abdomen = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), abdomenMat);
     this.abdomen.scale.set(1, 0.9, 1.4);
     this.abdomen.position.set(0, 0.2, -0.16);
     this.critterGroup.add(this.abdomen);
     const stripe = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.1, 0.1, 0.03, 6),
+      new THREE.CylinderGeometry(0.1, 0.1, 0.03, 8),
       makePS1Material({ color: 0x1a1a1a }),
     );
     stripe.rotation.z = Math.PI / 2;
     stripe.position.set(0, 0.2, -0.2);
     this.critterGroup.add(stripe);
+
+    // Bared stinger tip at the abdomen's rear point.
+    const stinger = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.09, 6), makePS1Material({ color: 0x151515 }));
+    stinger.rotation.x = -Math.PI / 2;
+    stinger.position.set(0, 0.18, -0.34);
+    this.critterGroup.add(stinger);
 
     const wingMat = makePS1Material({ color: 0xdedad0 });
     this.wingL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.01, 0.12), wingMat);
@@ -85,7 +115,7 @@ export class DartSquirrel extends Enemy {
     this.object.add(this.critterGroup);
 
     this.parts = [
-      { tag: 'body', node: body, radius: 0.22, damageMultiplier: 1, weakPoint: false, active: true },
+      { tag: 'body', node: this.bodyMesh, radius: 0.22, damageMultiplier: 1, weakPoint: false, active: true },
       { tag: 'abdomen', node: this.abdomen, radius: 0.14, damageMultiplier: 3, weakPoint: true, active: false },
     ];
     this.registerFlashMaterials();
@@ -95,6 +125,13 @@ export class DartSquirrel extends Enemy {
     if (this.dead) return;
     this.t += dt;
     this.timer -= dt;
+
+    // Constant low-amplitude twitch: quick breathing + ear flicker.
+    const breathe = 1 + Math.sin(this.t * 5) * 0.04;
+    this.bodyMesh.scale.set(breathe, 0.9 * breathe, 1.3 * breathe);
+    for (let i = 0; i < this.ears.length; i++) {
+      this.ears[i]!.rotation.x = Math.sin(this.t * 3 + i * 1.7) * 0.08;
+    }
 
     const toPlayer = ctx.playerPos.clone().sub(this.object.position);
     toPlayer.y = 0;

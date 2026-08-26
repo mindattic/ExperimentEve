@@ -66,6 +66,16 @@ export class GameState {
     return this.level >= 3;
   }
 
+  /** Species whose weak points she's learned (they glow on sight now). */
+  knownWeaknesses: string[] = [];
+
+  /** Record a discovery; returns true if it was new. */
+  learnWeakness(species: string): boolean {
+    if (this.knownWeaknesses.includes(species)) return false;
+    this.knownWeaknesses.push(species);
+    return true;
+  }
+
   maxHp = 80;
   hp = 80;
 

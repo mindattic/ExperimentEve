@@ -13,6 +13,7 @@ export class Jellyuncle extends Afflicted {
 
   private state: State = 'shamble';
   private timer = 1 + Math.random() * 2;
+  private t = 0;
   private auraAcc = 0;
   private bellActiveTimer = 0;
   private readonly bell: THREE.Mesh;
@@ -30,16 +31,24 @@ export class Jellyuncle extends Afflicted {
     this.object.add(legs, torso);
 
     this.bell = new THREE.Mesh(
-      new THREE.SphereGeometry(0.2, 7, 5),
+      new THREE.SphereGeometry(0.2, 9, 7),
       makePS1Material({ color: 0xcfe9e2, emissive: 0x3a7a70, transparent: true, opacity: 0.7 }),
     );
     this.bell.position.set(0, 1.59, 0);
     this.object.add(this.bell);
+    // Bioluminescent spots ringing the bell — a soft warning nobody heeds.
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x9dffe8, transparent: true, opacity: 0.85 });
+    for (let i = 0; i < 3; i++) {
+      const ang = (i / 3) * Math.PI * 2;
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 3), glowMat);
+      glow.position.set(Math.sin(ang) * 0.19, 1.59, Math.cos(ang) * 0.19);
+      this.object.add(glow);
+    }
 
     const tendrilMat = makePS1Material({ color: 0x2f5c54, transparent: true, opacity: 0.8 });
     for (let i = 0; i < 4; i++) {
       const ang = (i / 4) * Math.PI * 2;
-      const tendril = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.55, 4), tendrilMat);
+      const tendril = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.55, 7), tendrilMat);
       tendril.position.set(Math.sin(ang) * 0.1, 1.34, Math.cos(ang) * 0.08 - 0.14);
       tendril.rotation.x = 0.35;
       this.object.add(tendril);
@@ -53,6 +62,7 @@ export class Jellyuncle extends Afflicted {
   }
 
   protected updateUpright(dt: number, ctx: BattleContext): void {
+    this.t += dt;
     const dist = this.object.position.distanceTo(ctx.playerPos);
 
     // Passive hurt aura: no telegraph. Standing near him is the whole trap.
@@ -72,6 +82,8 @@ export class Jellyuncle extends Afflicted {
     switch (this.state) {
       case 'shamble': {
         this.shamble(dt, ctx.playerPos);
+        // Passive pulse: the bell breathes on its own even at rest.
+        this.bell.scale.setScalar(1 + Math.sin(this.t * 1.8) * 0.04);
         this.timer -= dt;
         if (dist < 2 && this.timer <= 0) {
           this.state = 'inflate';

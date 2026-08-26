@@ -39,8 +39,14 @@ export class Ratchoir extends Afflicted {
     this.object.add(this.torso);
 
     const ratMat = makePS1Material({ color: 0x2c2620 });
+    const tailMat = makePS1Material({ color: 0x5a4a42 });
     for (let i = 0; i < 5; i++) {
-      const rat = new THREE.Mesh(new THREE.SphereGeometry(0.09, 5, 4), ratMat);
+      const rat = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), ratMat);
+      // Whip-thin tail trailing off the back of each rat.
+      const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.012, 0.16, 4), tailMat);
+      tail.position.set(0, 0, -0.11);
+      tail.rotation.x = Math.PI / 2;
+      rat.add(tail);
       this.object.add(rat);
       this.rats.push(rat);
       this.angles.push((i / 5) * Math.PI * 2);

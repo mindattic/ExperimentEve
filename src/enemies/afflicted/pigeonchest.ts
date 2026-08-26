@@ -42,17 +42,30 @@ export class Pigeonchest extends Afflicted {
     this.chestY = 0.3;
 
     const cavityMat = makePS1Material({ color: 0x1a1512 });
-    this.cavity = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 5), cavityMat);
+    this.cavity = new THREE.Mesh(new THREE.SphereGeometry(0.13, 9, 7), cavityMat);
     this.cavity.position.set(0, this.chestY, 0.08);
     this.cavity.visible = false;
     this.torso.add(this.cavity);
+    // Broken rib edges framing the cavity — the roost's doorway.
+    const ribMat = makePS1Material({ color: 0xe8e0d0 });
+    for (const s of [-1, 1]) {
+      const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.01, 0.16, 5), ribMat);
+      rib.rotation.z = s * 0.9;
+      rib.position.set(s * 0.1, this.chestY + 0.02, 0.1);
+      this.cavity.add(rib);
+    }
 
     const pigeonMat = makePS1Material({ color: 0x9a9aa2 });
+    const beakMat = makePS1Material({ color: 0x8a6a2a });
     for (let i = 0; i < 3; i++) {
-      const p = new THREE.Mesh(new THREE.SphereGeometry(0.09, 5, 4), pigeonMat);
+      const p = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), pigeonMat);
       p.position.set(0, this.chestY, 0.1);
       this.torso.add(p);
       this.pigeons.push(p);
+      const beak = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.04, 5), beakMat);
+      beak.rotation.x = Math.PI / 2;
+      beak.position.set(0, 0.01, 0.09);
+      p.add(beak);
     }
 
     this.parts = [

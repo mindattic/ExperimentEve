@@ -36,13 +36,29 @@ export class Carpsire extends Afflicted {
 
     this.tail = new THREE.Group();
     const tailMat = makePS1Material({ color: 0x6a8a92 });
-    const tailBody = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.05, 0.85, 6), tailMat);
+    const tailBody = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.05, 0.85, 8), tailMat);
     tailBody.position.y = 0.42;
     this.tail.add(tailBody);
-    const fin = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.28, 4), tailMat);
+    const fin = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.28, 7), tailMat);
     fin.rotation.x = Math.PI / 2;
     fin.position.set(0, 0.06, 0.16);
     this.tail.add(fin);
+    // Barbels: the carp's whiskers, dangling right where a waistline used to be.
+    const barbelMat = makePS1Material({ color: 0x4a6a72 });
+    for (const s of [-1, 1]) {
+      const barbel = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.01, 0.14, 4), barbelMat);
+      barbel.position.set(s * 0.05, 0.78, 0.04);
+      barbel.rotation.x = 0.5;
+      this.tail.add(barbel);
+    }
+    // A ring of scales climbing the tail's upper reach.
+    const scaleMat = makePS1Material({ color: 0x557a82 });
+    for (let i = 0; i < 3; i++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.12 - i * 0.02, 0.012, 4, 8), scaleMat);
+      ring.position.set(0, 0.6 + i * 0.08, 0);
+      ring.rotation.x = Math.PI / 2;
+      this.tail.add(ring);
+    }
     this.object.add(this.tail);
 
     this.parts = [
