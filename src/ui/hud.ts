@@ -46,7 +46,8 @@ export class Hud {
 
     this.timeEl = document.createElement('div');
     this.timeEl.style.cssText =
-      'position:absolute;right:14px;top:10px;font-size:13px;color:#a8b4bc;text-align:right';
+      'position:absolute;right:16px;bottom:14px;font-size:15px;color:#c8d0d8;text-align:right;' +
+      'background:rgba(4,8,14,.55);padding:2px 10px;letter-spacing:1px';
     hudRoot.appendChild(this.timeEl);
 
     this.msgEl = document.createElement('div');

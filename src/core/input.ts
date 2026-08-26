@@ -21,6 +21,7 @@ export interface InputSample {
   interactJust: boolean;
   menu: boolean;
   menuJust: boolean;
+  reloadJust: boolean;
   navUpJust: boolean;
   navDownJust: boolean;
   navLeftJust: boolean;
@@ -31,13 +32,13 @@ export interface InputSample {
 const DEADZONE = 0.25;
 
 type ActionName =
-  | 'confirm' | 'dodge' | 'interact' | 'menu'
+  | 'confirm' | 'dodge' | 'interact' | 'menu' | 'reload'
   | 'navUp' | 'navDown' | 'navLeft' | 'navRight';
 
 export class Input {
   private keys = new Set<string>();
   private prev: Record<ActionName, boolean> = {
-    confirm: false, dodge: false, interact: false, menu: false,
+    confirm: false, dodge: false, interact: false, menu: false, reload: false,
     navUp: false, navDown: false, navLeft: false, navRight: false,
   };
   padConnected = false;
@@ -114,6 +115,7 @@ export class Input {
       dodge: b(1) || this.key('Space', 'KeyX'),
       interact: b(2) || this.key('KeyE', 'KeyC'),
       menu: b(9) || this.key('Escape'),
+      reload: b(3) || this.key('KeyR'), // Y on pad
       navUp: b(12) || this.key('ArrowUp', 'KeyW'),
       navDown: b(13) || this.key('ArrowDown', 'KeyS'),
       navLeft: b(14) || this.key('ArrowLeft', 'KeyA'),
@@ -127,6 +129,7 @@ export class Input {
       dodge: now.dodge, dodgeJust: just('dodge'),
       interact: now.interact, interactJust: just('interact'),
       menu: now.menu, menuJust: just('menu'),
+      reloadJust: just('reload'),
       navUpJust: just('navUp'),
       navDownJust: just('navDown'),
       navLeftJust: just('navLeft'),

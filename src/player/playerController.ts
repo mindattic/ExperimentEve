@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { resolveCircle, type Collider } from '../physics/colliders';
 
 export const PLAYER_RADIUS = 0.35;
+const DODGE_DURATION = 0.34;
 
 // Exploration movement: world-space direction comes from the InputLatch,
 // collision is circle-vs-level in XZ. The visual (rig or placeholder) is a
@@ -37,14 +38,22 @@ export class PlayerController {
     return this.dodgeTimer > 0;
   }
 
-  /** Try to start a dodge roll: burst of speed + i-frames. */
+  /** 1 at dodge start, 0 at landing — drives the rig's leap pose. */
+  get dodgeProgress(): number {
+    return this.dodgeTimer > 0 ? this.dodgeTimer / DODGE_DURATION : 0;
+  }
+
+  /**
+   * Dodge = a real leap: she springs along the dodge direction (backward
+   * when standing still), leaves the ground, and lands in a crouch.
+   */
   dodge(moveDir: THREE.Vector3 | null): boolean {
     if (this.locked || this.dodgeCooldown > 0) return false;
     if (moveDir) this.dodgeDir.copy(moveDir).normalize();
     else this.dodgeDir.set(Math.sin(this.facing + Math.PI), 0, Math.cos(this.facing + Math.PI));
-    this.dodgeTimer = 0.3;
+    this.dodgeTimer = DODGE_DURATION;
     this.dodgeCooldown = 0.9;
-    this.iFrames = 0.45;
+    this.iFrames = 0.5;
     return true;
   }
 
@@ -58,11 +67,14 @@ export class PlayerController {
     this.iFrames = Math.max(0, this.iFrames - dt);
     if (this.dodgeTimer > 0) {
       this.dodgeTimer -= dt;
-      this.object.position.addScaledVector(this.dodgeDir, 8.5 * dt);
+      // Burst fades over the leap; a low ballistic arc sells the jump.
+      const k = Math.max(0, this.dodgeTimer / DODGE_DURATION); // 1 -> 0
+      this.object.position.addScaledVector(this.dodgeDir, (5 + 6.5 * k) * dt);
       resolveCircle(this.object.position, PLAYER_RADIUS, colliders, this.floorY);
-      this.object.position.y = this.floorY;
-      this.facing = Math.atan2(this.dodgeDir.x, this.dodgeDir.z);
+      this.object.position.y = this.floorY + Math.sin((1 - k) * Math.PI) * 0.28;
+      // She keeps facing where she was facing — a leap AWAY, not a turn.
       this.object.rotation.y = this.facing;
+      if (this.dodgeTimer <= 0) this.object.position.y = this.floorY;
       return;
     }
     if (this.locked) moveDir = null;

@@ -32,6 +32,7 @@ import { buildProtestField } from './level/props/protestField';
 import { GraffitiWall } from './level/props/graffiti';
 import { buildHouse, buildStorefront, buildStreetLamp } from './level/props/facades';
 import { placeModels } from './level/props/modelLoader';
+import { Particles } from './render/particles';
 import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
 import { WorldAI } from './enemies/worldAI';
@@ -194,15 +195,21 @@ for (const [lx, lz, ry] of [[2.5, -2.5, Math.PI], [-2.5, 14, 0]] as const) {
   scene.add(lamp2.group);
 }
 
-// Dynamic set-dressing: truck fire + lighthouse save lamp.
+// Particle pool: fire, muzzle flashes, wounds, sparks.
+const particles = new Particles(scene);
+
+// Dynamic set-dressing: truck fire + lighthouse save lamp. The cones are the
+// glow cores; the actual flames are particles licking up off them.
 const fireGroup = new THREE.Group();
 const fireMat = new THREE.MeshLambertMaterial({
   color: 0x331100, emissive: 0xff6a1a, emissiveIntensity: 1,
 });
+const flameEmitters: ReturnType<Particles['addFlame']>[] = [];
 for (const [fx, fz, s] of [[-1, -22.3, 1.4], [1.5, -22, 1.1], [3.5, -22.4, 1.2], [-4.5, -23.5, 1.0]] as const) {
   const cone = new THREE.Mesh(new THREE.ConeGeometry(0.5 * s, 1.6 * s, 5), fireMat);
   cone.position.set(fx, 2.9 + 0.8 * s, fz);
   fireGroup.add(cone);
+  flameEmitters.push(particles.addFlame(fx, 2.6 + 0.6 * s, fz, 0.55 * s, 18 * s));
 }
 const fireLight = new THREE.PointLight(0xff7722, 2.4, 18);
 fireLight.position.set(0, 3.5, -22);
@@ -302,8 +309,22 @@ const garageMachine = {
 };
 const battle = new BattleSystem(state, scene, hudEl, canvas);
 battle.onMessage = (t) => hud.message(t);
+battle.onAtbReady = () => sfx.atbReady();
 const dmgNumbers = new DamageNumbers(hudEl);
-battle.onDamage = (pos, amount, crit) => dmgNumbers.spawn(pos, amount, crit);
+battle.onDamage = (pos, amount, crit) => {
+  dmgNumbers.spawn(pos, amount, crit);
+  hitStop = crit ? 0.12 : 0.06;
+  // The wound itself: dark spray, brighter and bigger on a crit.
+  particles.burst(pos, {
+    count: crit ? 16 : 9,
+    color: crit ? 0xd8433a : 0x8a2a24,
+    colorEnd: 0x30100c,
+    speed: crit ? 3.4 : 2.4,
+    life: 0.4,
+    size: 0.07,
+    gravity: 7,
+  });
+};
 battle.hasAxe = () => inventory.count('fireAxe') > 0;
 battle.inv = inventory;
 pawnMenu.onMessage = (t) => hud.message(t);
@@ -328,7 +349,19 @@ scene.add(muzzleLight);
 let muzzleTimer = 0;
 battle.onShot = () => {
   muzzleTimer = 0.07;
-  muzzleLight.position.copy(player.position).add(new THREE.Vector3(0, 1.3, 0));
+  const muzzle = player.position.clone().add(new THREE.Vector3(Math.sin(player.facing) * 0.35, 1.32, Math.cos(player.facing) * 0.35));
+  muzzleLight.position.copy(muzzle);
+  particles.burst(muzzle, {
+    count: 7,
+    color: 0xffd888,
+    colorEnd: 0xff6a1a,
+    speed: 4,
+    spread: 0.4,
+    dir: new THREE.Vector3(Math.sin(player.facing), 0.1, Math.cos(player.facing)),
+    life: 0.14,
+    size: 0.08,
+    gravity: 0,
+  });
   input.rumble(120, 0.4, 0.8);
   sfx.gunshot();
   rollCatAllies();
@@ -360,15 +393,9 @@ function rollCatAllies(): void {
   }
 }
 
-// City Hall chimes every hour on the hour — gameplay stops to listen, then
-// the message box. Castlevania II: Simon's Quest, quoted directly.
-const curseBox = document.createElement('div');
-curseBox.style.cssText =
-  'position:absolute;left:50%;top:16%;transform:translateX(-50%);display:none;' +
-  'background:#06062a;border:3px solid #3050e8;padding:14px 22px;color:#fff;' +
-  'font-size:16px;letter-spacing:2px;line-height:1.7;max-width:340px;text-align:left';
-curseBox.textContent = 'WHAT A HORRIBLE NIGHT TO HAVE A CURSE.';
-hudEl.appendChild(curseBox);
+// City Hall chimes every hour on the hour — ambient bells across the
+// district. (They used to freeze play with a curse box; playtesting said
+// that read as a bug, so the bells just ring now.)
 
 interface ChimeState {
   count: number;
@@ -601,6 +628,11 @@ function handleInteract(i: Interactable): void {
       break;
     }
     case 'trade': {
+      // The pawnbroker keeps his own hours: the slot shuts at 2 AM.
+      if (worldClock.minutesOfDay >= 26 * 60) {
+        hud.message('A hand-lettered card in the slot: CLOSED. BACK BEFORE DAWN. MAYBE.');
+        break;
+      }
       if (!state.flags['pawnMet']) {
         state.flags['pawnMet'] = true;
         subtitles.say('A voice behind the bars: "Baubles only. Bullets back."');
@@ -719,6 +751,8 @@ function handleInteract(i: Interactable): void {
 }
 
 let currentEncounter: 'none' | 'frog' | 'swarm' | 'giant' = 'none';
+let reloadTimer = 0;
+let hitStop = 0;
 
 function fireTrigger(id: string): void {
   switch (id) {
@@ -968,6 +1002,40 @@ const train = new THREE.Group();
   scene.add(train);
 }
 
+// ---- The story clock ---------------------------------------------------
+// The night runs on a schedule whether or not she's watching. Keep
+// exploring and you WILL run into the next beat — story arrives by hour,
+// not by fetch quest.
+const timedEvents: { at: number; run: () => void; fired?: boolean }[] = [
+  {
+    at: 21 * 60, // 9:00 PM — the Observer's first scheduled call
+    run: () => {
+      sfx.phoneRing();
+      subtitles.say('The payphone. "It gets thicker after nine. Keep moving, Katherine."', 4.5);
+    },
+  },
+  {
+    at: 23 * 60, // 11:00 PM — the last freight blasts through, no brakes
+    run: () => {
+      sfx.trainHorn();
+      train.visible = true;
+      train.position.x = -46;
+      subtitles.say('The 11 o\'clock freight. It doesn\'t slow for Kingsport anymore.', 4);
+    },
+  },
+  {
+    at: 24 * 60, // midnight — the deadline gets a shape
+    run: () => {
+      sfx.phoneRing();
+      subtitles.say('"Midnight. They sweep the district at four. Providence, Katherine."', 5);
+    },
+  },
+  {
+    at: 26 * 60, // 2:00 AM — the pawnbroker keeps his own hours
+    run: () => hud.message('Somewhere, a mail slot clicks shut.'),
+  },
+];
+
 // ---- Title / death / game-mode flow ----------------------------------
 type GameMode = 'title' | 'game' | 'dead';
 let mode: GameMode = 'title';
@@ -1042,9 +1110,12 @@ if (sessionStorage.getItem('eve-auto-continue') === '1' && hasSave()) {
 
 function frame(): void {
   const menuOpen = invMenu.open || statMenu.open || os.open || pawnMenu.open;
-  const chiming = chime !== null;
-  gameClock.timeScale = battle.wantsPause || menuOpen || chiming || mode !== 'game' ? 0 : 1;
+  const chiming = false; // bells are ambient — they never freeze play now
+  gameClock.timeScale = battle.wantsPause || menuOpen || chiming || mode !== 'game'
+    ? 0
+    : hitStop > 0 ? 0.12 : 1; // hit-stop: the frame bites on impact
   const { realDt, gameDt } = gameClock.tick();
+  hitStop = Math.max(0, hitStop - realDt);
   const sample = input.sample();
 
   // Title / death overlays swallow input; scene idles behind them.
@@ -1107,13 +1178,31 @@ function frame(): void {
       }
     }
   };
+  // R: dedicated reload. She stops, drops the mag, does it properly —
+  // rooted in place for the whole reload (in or out of battle).
+  if (reloadTimer > 0) {
+    reloadTimer -= gameDt;
+    if (reloadTimer <= 0) {
+      state.reload();
+      hud.message(`Reloaded. ${state.ammoInClip}/${state.clipSize}.`);
+    }
+  } else if (
+    sample.reloadJust && !menuOpen && !lockpick.open && !climb && !battle.wantsPause &&
+    state.ammoInClip < state.clipSize && state.reserveAmmo > 0
+  ) {
+    reloadTimer = state.reloadSeconds;
+    sfx.reloadClack();
+    hud.message('Reloading—');
+  }
+  const reloading = reloadTimer > 0;
+
   if (battle.active) {
-    player.locked = !battle.playerControlled || menuOpen || chiming || climb !== null || lockpick.open;
-    if (battle.playerControlled && !menuOpen && !chiming && sample.dodgeJust) tryDodge();
+    player.locked = !battle.playerControlled || menuOpen || chiming || climb !== null || lockpick.open || reloading;
+    if (battle.playerControlled && !menuOpen && !chiming && !reloading && sample.dodgeJust) tryDodge();
     battle.update(realDt, gameDt, sample, player, cameraMgr.camera, colliders);
   } else {
-    player.locked = menuOpen || chiming || climb !== null || lockpick.open;
-    if (!menuOpen && !chiming && !climb && !lockpick.open && sample.dodgeJust) tryDodge();
+    player.locked = menuOpen || chiming || climb !== null || lockpick.open || reloading;
+    if (!menuOpen && !chiming && !climb && !lockpick.open && !reloading && sample.dodgeJust) tryDodge();
     for (const t of level.triggers) {
       if (!t.fired && triggerContains(t, player.position.x, player.position.z)) {
         t.fired = true;
@@ -1121,11 +1210,6 @@ function frame(): void {
       }
     }
     state.regen(gameDt);
-    // Walking is when she tops the clip off. No drama out here.
-    if (state.ammoInClip < state.clipSize && state.reserveAmmo > 0) {
-      const n = state.reload();
-      if (n > 0) hud.message(`Reloaded. ${state.ammoInClip}/${state.clipSize}.`);
-    }
     // Erasure vignette: detection + the Execution opener.
     squad.update(gameDt, player.position, moveDir ? sample.magnitude : 0, colliders);
     executionMark = squad.executionCandidate(player.position);
@@ -1173,7 +1257,7 @@ function frame(): void {
 
   rig.pose = battle.phase === 'fire' ? 'aim' : 'explore';
   const moving = moveDir !== null && !player.locked;
-  rig.update(gameDt, moving && !player.riding ? sample.magnitude : 0);
+  rig.update(gameDt, moving && !player.riding ? sample.magnitude : 0, player.dodgeProgress);
 
   // Footsteps on foot-plants (walk phase crosses multiples of pi).
   if (moving) {
@@ -1230,6 +1314,7 @@ function frame(): void {
   }
 
   dmgNumbers.update(realDt, cameraMgr.camera);
+  particles.update(gameDt);
   // Ambience animation.
   worldClock.tick(realDt); // the night does not pause for menus
   applyTimeOfDay();
@@ -1298,7 +1383,7 @@ function frame(): void {
     if (train.position.x > 70) train.visible = false;
   }
 
-  // Hourly chime: freeze, count the bells, read the curse.
+  // Hourly chime: the bells ring out the hour, ambient. Play continues.
   const nowHour = hourOf(worldClock.minutesOfDay);
   if (!chime && nowHour > lastChimedHour && audio.unlocked && introTimer <= 0) {
     lastChimedHour = nowHour;
@@ -1306,25 +1391,24 @@ function frame(): void {
     chime = { count: h12, played: 0, timer: 0.8, msgTimer: -1 };
   }
   if (chime) {
-    player.locked = true;
     chime.timer -= realDt;
     if (chime.played < chime.count) {
       if (chime.timer <= 0) {
         sfx.bellChime();
-        input.rumble(180, 0.2, 0.4);
         chime.played++;
         chime.timer = 1.3;
       }
-    } else if (chime.msgTimer < 0) {
-      if (chime.timer <= 0) {
-        curseBox.style.display = 'block';
-        chime.msgTimer = 0;
-      }
     } else {
-      chime.msgTimer += realDt;
-      if (chime.msgTimer > 3.2) {
-        curseBox.style.display = 'none';
-        chime = null;
+      chime = null;
+    }
+  }
+
+  // Scheduled story beats fire as their hour arrives.
+  if (mode === 'game' && introTimer <= 0) {
+    for (const ev of timedEvents) {
+      if (!ev.fired && worldClock.minutesOfDay >= ev.at) {
+        ev.fired = true;
+        ev.run();
       }
     }
   }
@@ -1333,6 +1417,7 @@ function frame(): void {
   if (state.flags['fireOut'] && fireGroup.visible) {
     fireGroup.visible = false;
     fireLight.intensity = 0;
+    for (const f of flameEmitters) f.on = false;
     const heat = level.interactables.find((i) => i.id === 'truckHeat');
     if (heat) heat.used = true;
   }

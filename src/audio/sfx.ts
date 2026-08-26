@@ -57,6 +57,29 @@ export class Sfx {
     this.a.tone({ from: 660, to: 990, duration: 0.09, type: 'square', gain: 0.14 });
   }
 
+  /** ATB gauge full: the PE-style ready chirp. */
+  atbReady(): void {
+    this.a.tone({ from: 740, to: 1180, duration: 0.07, type: 'square', gain: 0.16 });
+    setTimeout(() => this.a.tone({ from: 1180, duration: 0.09, type: 'square', gain: 0.13 }), 80);
+  }
+
+  /** A freight horn, far off. It does not slow for Kingsport anymore. */
+  trainHorn(): void {
+    this.a.tone({ from: 185, duration: 1.4, type: 'sawtooth', gain: 0.12, attack: 0.3 });
+    this.a.tone({ from: 233, duration: 1.4, type: 'sawtooth', gain: 0.1, attack: 0.3 });
+    setTimeout(() => {
+      this.a.tone({ from: 185, duration: 2.2, type: 'sawtooth', gain: 0.1, attack: 0.4 });
+      this.a.tone({ from: 233, duration: 2.2, type: 'sawtooth', gain: 0.08, attack: 0.4 });
+    }, 1800);
+  }
+
+  /** Magazine out, magazine in, slide. */
+  reloadClack(): void {
+    this.a.noiseBurst({ duration: 0.05, filterFrom: 1600, gain: 0.22 });
+    setTimeout(() => this.a.noiseBurst({ duration: 0.05, filterFrom: 900, gain: 0.25 }), 220);
+    setTimeout(() => this.a.tone({ from: 300, to: 190, duration: 0.07, type: 'square', gain: 0.2 }), 430);
+  }
+
   pickup(): void {
     this.a.tone({ from: 520, to: 780, duration: 0.12, type: 'triangle', gain: 0.2 });
   }

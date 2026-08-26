@@ -36,6 +36,11 @@ export class BattleSystem {
   private targetIndex = 0;
   private fireTimer = 0;
   private rapidPending = false;
+  private domeGrow = 0;
+  private domeShown = false;
+  private atbWasFull = false;
+  /** ATB gauge just filled — main plays the ready chirp. */
+  onAtbReady: (() => void) | null = null;
   private pendingCrit: 'none' | 'weak' | 'body' | 'miss' = 'none';
   private sweepT = 0;
   private lockedY = 0.5;
@@ -146,6 +151,29 @@ export class BattleSystem {
 
     for (const e of this.enemies) e.updateAlways(realDt);
 
+    // ATB-full chirp (once per fill).
+    if (this.atb >= 1 && !this.atbWasFull) {
+      this.atbWasFull = true;
+      this.onAtbReady?.();
+    } else if (this.atb < 1) {
+      this.atbWasFull = false;
+    }
+
+    // The range dome blooms out of Kat the moment the game pauses.
+    const paused = this.phase === 'menu' || this.phase === 'aim';
+    if (paused && !this.domeShown) {
+      this.domeShown = true;
+      this.domeGrow = 0;
+    }
+    if (!paused) this.domeShown = false;
+    this.dome.visible = paused;
+    if (paused) {
+      this.domeGrow = Math.min(1, this.domeGrow + realDt * 2.0);
+      const k = 1 - Math.pow(1 - this.domeGrow, 3); // ease-out bloom
+      this.dome.scale.setScalar(Math.max(0.02, k));
+      this.dome.position.copy(player.position);
+    }
+
     // Enemies act only in real-time phases (gameDt is 0 while paused anyway,
     // but skipping entirely avoids dt=0 math).
     if (gameDt > 0) {
@@ -157,6 +185,16 @@ export class BattleSystem {
       };
       for (const e of this.enemies) {
         if (!e.dead && !e.tickStun(gameDt)) e.updateBattle(gameDt, ctx);
+      }
+      // Separation: enemies never stack into one another (or into Kat).
+      const alive = this.enemiesAlive;
+      for (let i = 0; i < alive.length; i++) {
+        const a = alive[i]!;
+        for (let j = i + 1; j < alive.length; j++) {
+          const b = alive[j]!;
+          pushApart(a.object.position, b.object.position, a.radius + b.radius, 0.5);
+        }
+        pushApart(a.object.position, player.position, a.radius + 0.4, 0);
       }
       this.state.regen(gameDt);
     }
@@ -760,4 +798,20 @@ export class BattleSystem {
 function pingPong(t: number): number {
   const m = t % 2;
   return m < 1 ? m : 2 - m;
+}
+
+/**
+ * Push a away from b (and b away from a by `share`) until they no longer
+ * overlap in XZ. share=0 leaves b (the player) unmoved.
+ */
+function pushApart(a: THREE.Vector3, b: THREE.Vector3, minDist: number, share: number): void {
+  const dx = a.x - b.x;
+  const dz = a.z - b.z;
+  const d = Math.hypot(dx, dz);
+  if (d >= minDist || d < 1e-4) return;
+  const push = (minDist - d) / d;
+  a.x += dx * push * (1 - share);
+  a.z += dz * push * (1 - share);
+  b.x -= dx * push * share;
+  b.z -= dz * push * share;
 }

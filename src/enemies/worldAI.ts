@@ -443,6 +443,27 @@ export class WorldAI {
       }
     }
 
+    // Separation: wanderers shoulder past each other, never overlap.
+    for (let i = 0; i < this.wanderers.length; i++) {
+      const a = this.wanderers[i]!;
+      if (a.enemy.dead) continue;
+      for (let j = i + 1; j < this.wanderers.length; j++) {
+        const b = this.wanderers[j]!;
+        if (b.enemy.dead) continue;
+        const pa = a.enemy.object.position;
+        const pb = b.enemy.object.position;
+        const minD = a.enemy.radius + b.enemy.radius;
+        const dx = pa.x - pb.x;
+        const dz = pa.z - pb.z;
+        const d = Math.hypot(dx, dz);
+        if (d < minD && d > 1e-4) {
+          const push = ((minD - d) / d) * 0.5;
+          pa.x += dx * push; pa.z += dz * push;
+          pb.x -= dx * push; pb.z -= dz * push;
+        }
+      }
+    }
+
     this.wanderers = this.wanderers.filter((w) => !w.enemy.dead);
   }
 

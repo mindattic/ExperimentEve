@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import { blitVertexShader, blitFragmentShader } from './ditherQuantize';
 
-export const INTERNAL_WIDTH = 320;
-export const INTERNAL_HEIGHT = 240;
+// PSX-HD: PS1 rendering grammar (vertex snap, affine warp, dither/quantize)
+// at 4x the dots. 640x480 keeps the pixel identity readable without the
+// DOS-era mush of 320x240 on a modern panel.
+export const INTERNAL_WIDTH = 640;
+export const INTERNAL_HEIGHT = 480;
 
-// Renders the scene into a 320x240 target, then blits it to the canvas with
-// nearest-neighbor upscaling + dither/quantize. The canvas is letterboxed 4:3.
+// Renders the scene into the internal target, then blits it to the canvas
+// with nearest-neighbor upscaling + dither/quantize. Letterboxed 4:3.
 export class LowResPipeline {
   readonly renderer: THREE.WebGLRenderer;
   enabled = true;
