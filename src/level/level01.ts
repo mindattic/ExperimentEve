@@ -232,6 +232,7 @@ export const LEVEL01: LevelDef = {
     { min: [-4.9, 25.9], max: [-4.2, 27], h: 1.6, color: 0x5d4a3c }, // shelf
     { min: [-6.6, 19.2], max: [-4.9, 20], h: 0.9, color: 0x707a80 }, // kitchen sink counter
     { min: [-5, 22.7], max: [-4.4, 23.3], h: 0.75, color: 0x6a6258 }, // phone table + answering machine
+    { min: [-6.9, 20.9], max: [-6.1, 21.7], h: 0.9, color: 0x2c2c32 }, // TV/VCR combo on a milk crate
     { min: [-8, 23.2], max: [-7.2, 24.4], h: 2.1, color: 0x5a4c40 }, // bedroom closet
     { min: [-12.1, 21.1], max: [-11.4, 21.9], h: 0.9, color: 0x2e3236 }, // backyard grill
     { min: [-10.95, 24.2], max: [-10.45, 25], h: 1.8, color: 0x4a4238 }, // gun cabinet
@@ -300,8 +301,8 @@ export const LEVEL01: LevelDef = {
     {
       id: 'strongbox', x: 27, z: -5.3, prompt: 'A strongbox, bolted to the floor', kind: 'locked',
       lockDifficulty: 'hard',
-      inspectText: 'The strongbox gives. Payroll baubles, the shop\'s spare lighter — and a syringe worth more than the payroll.',
-      grants: [{ item: 'pocketWatch', n: 1 }, { item: 'ring', n: 1 }, { item: 'lighter', n: 1 }, { item: 'injMitosis', n: 1 }],
+      inspectText: 'The strongbox gives. Payroll baubles, the shop\'s spare lighter, a syringe worth more than the payroll — and somebody\'s prized direct-to-video action tape.',
+      grants: [{ item: 'pocketWatch', n: 1 }, { item: 'ring', n: 1 }, { item: 'lighter', n: 1 }, { item: 'injMitosis', n: 1 }, { item: 'tapeCarpetBurn', n: 1 }],
     },
     { id: 'bathcab1', x: -10.4, z: 20.2, prompt: 'Search the medicine cabinet', kind: 'container', roomType: 'bathroom', containerType: 'cabinet' },
     { id: 'tub-house1', x: -8.7, z: 20.5, prompt: 'Draw a bath', kind: 'inspect', once: false },
@@ -329,6 +330,12 @@ export const LEVEL01: LevelDef = {
       inspectText: 'MEGAHIT VIDEO — NEW RELEASE: SINKING SHIP. The return slot is jammed with tapes. Every one of them is Sinking Ship.',
     },
     { id: 'ansMachine1', x: -4.8, z: 23, prompt: 'Play the answering machine', kind: 'inspect', once: false },
+    { id: 'tvVcr1', x: -6.5, z: 21.3, prompt: 'The TV/VCR combo', kind: 'inspect', once: false },
+    {
+      id: 'returnSlot', x: 4.6, z: 12.2, prompt: 'Reach into the return slot', kind: 'pickup',
+      inspectText: 'Wedged among forty copies of Sinking Ship: one kung-fu rental somebody actually returned. PATHS OF THE OPEN HAND.',
+      grants: [{ item: 'tapeOpenHand', n: 1 }],
+    },
     {
       id: 'dadCard', x: -4.5, z: 24.8, prompt: 'Look at the card', kind: 'inspect', once: false,
       inspectText: 'A Father\'s Day card, signed by three kids in three colors. Sealed. Today was Father\'s Day.',

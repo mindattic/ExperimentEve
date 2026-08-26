@@ -19,10 +19,12 @@ export type ItemId =
   // guns (all 9mm-fed in the slice) and the parts stripped out of them
   | 'gunSnub' | 'gunErasure' | 'gunLongslide'
   | 'partBarrel' | 'partMag' | 'partAction' | 'partGrip'
+  // skill tapes: watch them on a TV/VCR combo to learn what they teach
+  | 'tapeOpenHand' | 'tapeCarpetBurn'
   // keepsakes: cannot be sold, spent, or lost
   | 'katsCard';
 
-export type ItemCategory = 'component' | 'crafted' | 'consumable' | 'ammo' | 'bauble' | 'gear' | 'gun' | 'gunPart' | 'keepsake';
+export type ItemCategory = 'component' | 'crafted' | 'consumable' | 'ammo' | 'bauble' | 'gear' | 'gun' | 'gunPart' | 'tape' | 'keepsake';
 
 export type GearSlot = 'torso' | 'legs';
 
@@ -204,6 +206,14 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'denimPants', name: 'Denim Pants', category: 'gear', slot: 'legs', armor: 0.08,
     desc: 'Stonewashed, bootcut, indestructible. The 90s built two things to last and this is both of them.',
     equipLine: 'These are somebody\'s good jeans.',
+  },
+  tapeOpenHand: {
+    id: 'tapeOpenHand', name: 'PATHS OF THE OPEN HAND (VHS)', category: 'tape',
+    desc: 'A kung-fu rental, rewound by nobody. The master beckons with four fingers and lets the fight come to him. Watch it on a working VCR.',
+  },
+  tapeCarpetBurn: {
+    id: 'tapeCarpetBurn', name: 'CARPET BURN 2: BURN HARDER (VHS)', category: 'tape',
+    desc: 'Direct-to-video. The hero spends forty minutes of runtime sliding on his knees, guns out. The knees are the special effect. Watch it on a working VCR.',
   },
   katsCard: {
     id: 'katsCard', name: 'Father\'s Day Card (unsigned)', category: 'keepsake',

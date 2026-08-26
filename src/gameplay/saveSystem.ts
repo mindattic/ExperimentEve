@@ -83,7 +83,7 @@ export function applySave(data: SaveData, state: GameState, inv: Inventory): voi
   state.unspentPoints = data.unspentPoints;
   state.level = data.level ?? 1;
   state.xp = data.xp ?? 0;
-  state.abilities = { rapidFire: false, ...data.abilities };
+  state.abilities = { rapidFire: false, taunt: false, kneeSlide: false, ...data.abilities };
   state.infusions = { ...state.infusions, ...data.infusions };
   state.equipped = { ...data.equipped };
   state.weaponId = data.weaponId ?? 'dutyPistol';

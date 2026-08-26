@@ -231,9 +231,11 @@ export class PlayerRig {
 
   /**
    * speed01: 0 idle .. 1 full run. dodgeK: 1 at leap start, 0 at landing —
-   * tucks her into a mid-air guard. Call every frame with game dt.
+   * tucks her into a mid-air guard. slideK: same window for the Knee Slide —
+   * kneeling glide, torso back, gun up (the carpet burn is implied).
+   * Call every frame with game dt.
    */
-  update(dt: number, speed01: number, dodgeK = 0): void {
+  update(dt: number, speed01: number, dodgeK = 0, slideK = 0): void {
     this.idleTime += dt;
     const moving = speed01 > 0.02;
     if (moving) {
@@ -297,7 +299,7 @@ export class PlayerRig {
     }
 
     // Dodge leap: lean back hard, knees up, arms flared for balance.
-    if (dodgeK > 0) {
+    if (dodgeK > 0 && slideK <= 0) {
       const d = Math.sin(dodgeK * Math.PI); // peaks mid-leap
       this.torso.rotation.x = -0.4 * d;
       this.upperLegL.rotation.x = -1.0 * d;
@@ -306,6 +308,25 @@ export class PlayerRig {
       this.lowerLegR.rotation.x = 1.1 * d;
       this.upperArmL.rotation.z = 0.9 * d;
       this.upperArmR.rotation.z = -0.9 * d;
+    }
+
+    // Knee slide: kneeling glide — calves folded under, torso thrown back,
+    // both arms up and shooting. The knees are the special effect.
+    if (slideK > 0) {
+      const s = Math.min(1, slideK * 3); // snaps in, holds through the slide
+      this.hips.position.y = 0.92 - 0.42 * s;
+      this.torso.rotation.x = -0.5 * s;
+      this.head.rotation.x = 0.35 * s; // eyes stay on the target
+      this.upperLegL.rotation.x = -0.4 * s;
+      this.upperLegR.rotation.x = -0.55 * s;
+      this.lowerLegL.rotation.x = 2.1 * s;
+      this.lowerLegR.rotation.x = 2.2 * s;
+      this.upperArmL.rotation.x = -1.35 * s;
+      this.upperArmL.rotation.z = 0.35 * s;
+      this.upperArmR.rotation.x = -1.45 * s;
+      this.upperArmR.rotation.z = -0.15 * s;
+      this.forearmL.rotation.x = -0.2 * s;
+      this.forearmR.rotation.x = -0.1 * s;
     }
 
     // Ponytail lags the bob.

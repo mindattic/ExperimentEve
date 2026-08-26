@@ -582,16 +582,23 @@ function nearestInteractable(): Interactable | null {
 }
 
 // Scripted ladder climb: locks the player and drives position directly.
+// Going DOWN is a slide — boots on the rails, hands loose — and doing it
+// mid-fight is style: the gauge likes it.
 let climb: { t: number; dur: number; from: THREE.Vector3; to: THREE.Vector3 } | null = null;
 function startClimb(to: [number, number, number]): void {
+  const descending = to[2] < player.floorY - 0.5;
   climb = {
     t: 0,
-    dur: 1.3,
+    dur: descending ? 0.55 : 1.3,
     from: player.position.clone(),
     to: new THREE.Vector3(to[0], to[2], to[1]),
   };
   latch.reset();
   sfx.footstep(false);
+  if (descending) {
+    state.addLimit(8);
+    if (battle.active) hud.message('STYLE — fire-escape slide.');
+  }
 }
 
 function handleInteract(i: Interactable): void {
@@ -688,6 +695,41 @@ function handleInteract(i: Interactable): void {
         } else {
           subtitles.say('Dead line. It rang once tonight. Once was the message.');
         }
+        break;
+      }
+      if (i.id === 'tvVcr1') {
+        // The dojo is a TV/VCR combo in somebody's living room. Watching
+        // costs night — the clock does not pause for training montages.
+        const tape = inventory.count('tapeOpenHand') > 0
+          ? 'tapeOpenHand' as const
+          : inventory.count('tapeCarpetBurn') > 0
+            ? 'tapeCarpetBurn' as const
+            : null;
+        if (!tape) {
+          if (state.abilities.taunt || state.abilities.kneeSlide) {
+            subtitles.say('Nothing left to study. The blue screen hums.');
+          } else {
+            hud.message('A TV/VCR combo, still powered. The tape door is empty and hungry.');
+          }
+          break;
+        }
+        inventory.remove(tape);
+        worldClock.elapsed += 12 * 60; // twelve minutes of the night, gone
+        sfx.uiConfirm();
+        if (tape === 'tapeOpenHand') {
+          state.abilities.taunt = true;
+          hud.message('PATHS OF THE OPEN HAND — watched. New battle skill: Taunt.');
+          subtitles.say('[whir... click]', 1.6);
+          subtitles.say('...So you just... invite them in. Okay. Okay!', 3.2);
+          subtitles.say('She practices the little hand-wave until it stops looking silly.', 3.4);
+        } else {
+          state.abilities.kneeSlide = true;
+          hud.message('CARPET BURN 2 — watched. Sprint + dodge is now a Knee Slide.');
+          subtitles.say('[whir... click]', 1.6);
+          subtitles.say('His knees should be BONE by act three.', 3);
+          subtitles.say('...I have to try it. Once. Twice.', 2.8);
+        }
+        state.addLimit(10);
         break;
       }
       if (i.id === 'ansMachine1') {
@@ -1298,6 +1340,7 @@ function frame(): void {
   const chiming = false; // bells are ambient — they never freeze play now
   gameClock.timeScale = battle.wantsPause || menuOpen || chiming || mode !== 'game'
     ? 0
+    : battle.bulletTime ? 0.18 // gun-fu: the world slows around the move
     : hitStop > 0 ? 0.12 : 1; // hit-stop: the frame bites on impact
   const { realDt, gameDt } = gameClock.tick();
   hitStop = Math.max(0, hitStop - realDt);
@@ -1352,7 +1395,10 @@ function frame(): void {
   }
 
   const tryDodge = (): void => {
-    if (player.dodge(moveDir)) {
+    // At full sprint, a learned Knee Slide replaces the leap — low, long,
+    // and (with ATB up) a firing platform.
+    const slide = state.abilities.kneeSlide && moveDir !== null && sample.magnitude > 0.85 && !player.riding;
+    if (player.dodge(moveDir, slide)) {
       sfx.dodgeRoll();
       if (player.riding) {
         // Bike ram: the dodge burst becomes a battering pass.
@@ -1419,6 +1465,7 @@ function frame(): void {
   if (battle.active && !catsBattleLatch) struckThisBattle.clear();
   catsBattleLatch = battle.active;
   cats.update(gameDt, player.position, state.catsTrust);
+  player.suspendDodge = battle.airborneHold; // bullet time holds the move
   player.update(gameDt, moveDir, sample.magnitude, colliders);
 
   // Bike ram resolution + durability.
@@ -1446,15 +1493,20 @@ function frame(): void {
 
   // Gun comes up the moment the tactical pause opens and stays up through
   // aiming and the shot — she's committed, and the pose says so.
-  rig.pose = battle.wantsPause || battle.phase === 'fire' ? 'aim' : 'explore';
+  rig.pose = battle.wantsPause || battle.bulletTime || battle.phase === 'fire' ? 'aim' : 'explore';
   // Below ~a third health she visibly carries the damage.
   rig.hurtK = Math.max(0, 1 - state.hp / (state.maxHp * 0.35));
   const moving = moveDir !== null && !player.locked;
   // The rig runs on realDt during the battle pause (so the gun-raise still
   // animates while the world is frozen) and gameDt otherwise (so hit-stop
-  // bites the animation too).
+  // and bullet time bite the animation too).
   const rigDt = battle.wantsPause ? realDt : gameDt;
-  rig.update(rigDt, moving && !player.riding ? sample.magnitude : 0, player.dodgeProgress);
+  rig.update(
+    rigDt,
+    moving && !player.riding ? sample.magnitude : 0,
+    player.sliding ? 0 : player.dodgeProgress,
+    player.sliding ? player.dodgeProgress : 0,
+  );
 
   // Footsteps on foot-plants (walk phase crosses multiples of pi).
   if (moving) {

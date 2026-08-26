@@ -13,6 +13,7 @@ export type BattlePhase =
   | 'active' // real time: ATB fills, player moves/dodges, enemies act
   | 'menu' // paused: Attack / PE / Item / Precision / Escape
   | 'aim' // paused: range dome + part cycling
+  | 'gunfu' // bullet time: aiming from inside a dodge leap or knee slide
   | 'sweepH' // paused: Precision Aim horizontal sweep
   | 'sweepV' // paused: Precision Aim vertical sweep
   | 'fire' // real time: rooted, shot resolves
@@ -65,6 +66,30 @@ export class BattleSystem {
   inv: Inventory | null = null;
   private meleePending = false;
   private readonly lastPlayerPos = new THREE.Vector3();
+
+  // ---- STYLE: fighting well looks good, and looking good pays ----------
+  /** Damage multiplier for the pending shot, set by style entries. */
+  private styleMul = 1;
+  private styleLabel = '';
+  /** She fired the taunt: enemies faster, her crits easier, all fight. */
+  private taunted = false;
+  /** Mid-move shot in progress: main holds the dodge/slide frozen. */
+  private airborne = false;
+
+  /** Bullet time is on (gun-fu aim) — main slows the clock, not pauses it. */
+  get bulletTime(): boolean {
+    return this.phase === 'gunfu';
+  }
+
+  /** While true, main freezes the player's dodge/slide mid-motion. */
+  get airborneHold(): boolean {
+    return this.airborne;
+  }
+
+  /** Taunted enemies run hot: battle scales their dt by this. */
+  private get hasteK(): number {
+    return this.taunted ? 1.3 : 1;
+  }
 
   private readonly dome: THREE.Mesh;
   private readonly targetMarker: THREE.Mesh;
@@ -185,6 +210,10 @@ export class BattleSystem {
     this.setLetterbox(true);
     this.enemies = enemies;
     this.killsSeen.clear();
+    this.styleMul = 1;
+    this.styleLabel = '';
+    this.taunted = false;
+    this.airborne = false;
     // Species she's fought before: their weak points glow on sight.
     for (const e of enemies) {
       if (this.state.knownWeaknesses.includes(e.displayName)) e.revealWeakness();
@@ -261,8 +290,10 @@ export class BattleSystem {
         colliders,
         dealDamageToPlayer: (amount: number) => this.state.damagePlayer(amount),
       };
+      // Taunted enemies act faster — she asked for this, literally.
+      const eDt = gameDt * this.hasteK;
       for (const e of this.enemies) {
-        if (!e.dead && !e.tickStun(gameDt)) e.updateBattle(gameDt, ctx);
+        if (!e.dead && !e.tickStun(eDt)) e.updateBattle(eDt, ctx);
       }
       // Separation: enemies never stack into one another (or into Kat).
       const alive = this.enemiesAlive;
@@ -294,7 +325,10 @@ export class BattleSystem {
         }
         this.atb = Math.min(1, this.atb + this.state.atbRatePerSec * gameDt);
         if (this.atb >= 1 && input.confirmJust) {
-          this.openMenu();
+          // Confirm from inside a dodge leap or knee slide = bullet time.
+          // Style is a verb here: move first, then shoot from the move.
+          if (player.dodging || player.sliding) this.enterGunfu(player.sliding);
+          else this.openMenu();
         }
         if (this.state.hp <= 0) {
           this.end();
@@ -309,6 +343,9 @@ export class BattleSystem {
         break;
       case 'aim':
         this.updateAim(input, player, camera);
+        break;
+      case 'gunfu':
+        this.updateGunfu(input, camera);
         break;
       case 'sweepH':
       case 'sweepV':
@@ -455,6 +492,19 @@ export class BattleSystem {
         enabled: s.limit >= 100 && s.ammoInClip > 0,
         action: () => this.openSweep(),
       },
+      // Learned from a kung-fu rental: the four-finger beckon. They come
+      // faster; she reads them better. Risk buys crits.
+      ...(s.abilities.taunt && !this.taunted
+        ? [{
+            label: 'Taunt  (the little hand-wave)',
+            enabled: this.enemiesAlive.length > 0,
+            action: () => {
+              this.taunted = true;
+              this.onMessage?.('She gives them the hand-wave from the tapes. They take it PERSONALLY.');
+              this.spendTurn();
+            },
+          }]
+        : []),
       ...(s.abilities.rapidFire
         ? [
             {
@@ -626,6 +676,9 @@ export class BattleSystem {
   private spendTurn(): void {
     this.atb = 0;
     this.phase = 'active';
+    this.styleMul = 1;
+    this.styleLabel = '';
+    this.airborne = false; // the move finishes on its own time
   }
 
   // ---- aiming (dome + part cycling) -----------------------------------
@@ -674,6 +727,52 @@ export class BattleSystem {
     }
   }
 
+  // ---- gun-fu: bullet time from inside the move -------------------------
+
+  private enterGunfu(fromSlide: boolean): void {
+    this.targets = [];
+    for (const e of this.enemiesAlive) {
+      for (const p of e.parts) {
+        if (p.active) this.targets.push({ enemy: e, part: p });
+      }
+    }
+    if (this.targets.length === 0) return; // nothing to be stylish at
+    this.phase = 'gunfu';
+    this.airborne = true;
+    this.targetIndex = 0;
+    this.styleMul = fromSlide ? 2 : 1.5;
+    this.styleLabel = fromSlide ? 'KNEE SLIDE' : 'GUN-FU';
+    this.onMessage?.(fromSlide
+      ? 'KNEE SLIDE — the asphalt takes the knees, the clip takes the rest.'
+      : 'GUN-FU — the world slows around the leap.');
+  }
+
+  private updateGunfu(input: InputSample, camera: THREE.Camera): void {
+    if (input.navLeftJust) this.targetIndex = (this.targetIndex + this.targets.length - 1) % this.targets.length;
+    if (input.navRightJust || input.navDownJust) this.targetIndex = (this.targetIndex + 1) % this.targets.length;
+
+    const t = this.targets[this.targetIndex]!;
+    const wp = t.part.node.getWorldPosition(new THREE.Vector3());
+    this.targetMarker.visible = true;
+    this.targetMarker.position.copy(wp);
+    this.targetMarker.lookAt((camera as THREE.PerspectiveCamera).position);
+
+    if (input.dodgeJust) {
+      // Style declined: the move resumes, the gauge stays full.
+      this.targetMarker.visible = false;
+      this.styleMul = 1;
+      this.styleLabel = '';
+      this.airborne = false;
+      this.phase = 'active';
+      return;
+    }
+    if (input.confirmJust) {
+      this.targetMarker.visible = false;
+      this.pendingCrit = 'none';
+      this.beginFire(0.22); // the shot snaps — she's already committed
+    }
+  }
+
   // ---- Precision Aim sweeps -------------------------------------------
 
   private openSweep(): void {
@@ -691,8 +790,10 @@ export class BattleSystem {
     const offX = rect.left - appRect.left;
     const offY = rect.top - appRect.top;
 
+    // Taunted, she reads motion better — the sweeps run slower for her.
+    const readK = this.taunted ? 1.25 : 1;
     if (this.phase === 'sweepH') {
-      this.sweepT += realDt / 1.3; // full sweep 1.3s, ping-pong
+      this.sweepT += realDt / (1.3 * readK); // full sweep 1.3s, ping-pong
       const f = pingPong(this.sweepT);
       this.sweepHEl.style.display = 'block';
       this.sweepHEl.style.left = `${offX}px`;
@@ -704,7 +805,7 @@ export class BattleSystem {
         this.sweepT = 0;
       }
     } else {
-      this.sweepT += realDt / 0.85; // second sweep faster
+      this.sweepT += realDt / (0.85 * readK); // second sweep faster
       const f = pingPong(this.sweepT);
       this.sweepVEl.style.display = 'block';
       this.sweepVEl.style.top = `${offY}px`;
@@ -805,19 +906,36 @@ export class BattleSystem {
       this.onDamage?.(wound, dealt, false);
       this.knock(t.enemy, 0.2);
     } else {
-      dealt = t.enemy.takeHit(s.gunDamage, t.part);
+      // STYLE stack: the move she shot from, the ground she holds, and the
+      // taunt she threw all multiply into this one trigger pull.
+      let mul = this.styleMul;
+      const labels: string[] = this.styleLabel ? [this.styleLabel] : [];
+      if (this.lastPlayerPos.y > wound.y + 0.9) {
+        mul *= 1.25;
+        labels.push('HIGH GROUND');
+      }
+      // Taunted: she's reading them mid-charge — plain hits can land crit.
+      let tauntCrit = false;
+      if (this.taunted && !t.part.weakPoint && Math.random() < 0.25) {
+        mul *= 3;
+        tauntCrit = true;
+        labels.push('READ THE CHARGE');
+      }
+      dealt = t.enemy.takeHit(s.gunDamage * mul, t.part);
       this.knock(t.enemy, t.part.weakPoint || t.part.damageMultiplier > 1 ? 0.3 : 0.12);
+      const prefix = labels.length ? `${labels.join(' + ')} — ` : '';
       this.onMessage?.(
         t.part.flatDamageOverride !== undefined
           ? `It barely notices. (${dealt})`
-          : `${t.part.tag} hit — ${dealt} damage.`,
+          : `${prefix}${t.part.tag} hit — ${dealt} damage.`,
       );
-      // Weak-point anatomy is this game's crit.
-      const crit = t.part.weakPoint || t.part.damageMultiplier > 1;
+      // Weak-point anatomy is this game's crit; style can earn one too.
+      const crit = t.part.weakPoint || t.part.damageMultiplier > 1 || tauntCrit;
       this.onDamage?.(wound, dealt, crit);
       if (crit && !t.enemy.dead) t.enemy.stun(1.2);
     }
-    s.addLimit(dealt * 0.6);
+    // Style pays twice: the shot and the gauge.
+    s.addLimit(dealt * 0.6 * (this.styleMul > 1 ? 2 : 1));
     if (t.enemy.dead) this.onMessage?.(`${t.enemy.displayName} is destroyed.`);
     else this.noteHit(t.enemy);
     this.pendingCrit = 'none';
@@ -899,6 +1017,10 @@ export class BattleSystem {
     this.sweepVEl.style.display = 'none';
     this.phase = 'inactive';
     this.enemies = [];
+    this.airborne = false;
+    this.styleMul = 1;
+    this.styleLabel = '';
+    this.taunted = false;
   }
 }
 

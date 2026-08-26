@@ -3,6 +3,7 @@ import { resolveCircle, type Collider } from '../physics/colliders';
 
 export const PLAYER_RADIUS = 0.35;
 const DODGE_DURATION = 0.34;
+const SLIDE_DURATION = 0.6;
 
 // Exploration movement: world-space direction comes from the InputLatch,
 // collision is circle-vs-level in XZ. The visual (rig or placeholder) is a
@@ -21,10 +22,17 @@ export class PlayerController {
   private readonly vel = new THREE.Vector3();
   private readonly dodgeDir = new THREE.Vector3();
   private dodgeTimer = 0;
+  private dodgeDuration = DODGE_DURATION;
+  private slideMode = false;
   private dodgeCooldown = 0;
   private iFrames = 0;
   /** While true (menus, cutscenes, fire animation) input is ignored. */
   locked = false;
+  /**
+   * Bullet time: while true the dodge/slide freezes mid-motion — timer
+   * holds, position holds — so she can shoot from inside the move.
+   */
+  suspendDodge = false;
 
   get position(): THREE.Vector3 {
     return this.object.position;
@@ -38,22 +46,34 @@ export class PlayerController {
     return this.dodgeTimer > 0;
   }
 
-  /** 1 at dodge start, 0 at landing — drives the rig's leap pose. */
+  /** Mid knee-slide (the dodge's low, forward, guns-out variant). */
+  get sliding(): boolean {
+    return this.dodgeTimer > 0 && this.slideMode;
+  }
+
+  /** 1 at dodge start, 0 at landing — drives the rig's leap/slide pose. */
   get dodgeProgress(): number {
-    return this.dodgeTimer > 0 ? this.dodgeTimer / DODGE_DURATION : 0;
+    return this.dodgeTimer > 0 ? this.dodgeTimer / this.dodgeDuration : 0;
   }
 
   /**
    * Dodge = a real leap: she springs along the dodge direction (backward
    * when standing still), leaves the ground, and lands in a crouch.
+   * slide = the Knee Slide (learned): low and forward, knees paying for it.
    */
-  dodge(moveDir: THREE.Vector3 | null): boolean {
+  dodge(moveDir: THREE.Vector3 | null, slide = false): boolean {
     if (this.locked || this.dodgeCooldown > 0) return false;
     if (moveDir) this.dodgeDir.copy(moveDir).normalize();
     else this.dodgeDir.set(Math.sin(this.facing + Math.PI), 0, Math.cos(this.facing + Math.PI));
-    this.dodgeTimer = DODGE_DURATION;
-    this.dodgeCooldown = 0.9;
-    this.iFrames = 0.5;
+    this.slideMode = slide && moveDir !== null;
+    this.dodgeDuration = this.slideMode ? SLIDE_DURATION : DODGE_DURATION;
+    this.dodgeTimer = this.dodgeDuration;
+    this.dodgeCooldown = this.slideMode ? 1.1 : 0.9;
+    this.iFrames = this.slideMode ? 0.45 : 0.5;
+    if (this.slideMode) {
+      // She slides facing down the lane, not away from it.
+      this.facing = Math.atan2(this.dodgeDir.x, this.dodgeDir.z);
+    }
     return true;
   }
 
@@ -66,15 +86,31 @@ export class PlayerController {
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
     this.iFrames = Math.max(0, this.iFrames - dt);
     if (this.dodgeTimer > 0) {
+      if (this.suspendDodge) {
+        // Bullet time holds her mid-move; i-frames hold with her.
+        this.iFrames = Math.max(this.iFrames, 0.1);
+        this.object.rotation.y = this.facing;
+        return;
+      }
       this.dodgeTimer -= dt;
-      // Burst fades over the leap; a low ballistic arc sells the jump.
-      const k = Math.max(0, this.dodgeTimer / DODGE_DURATION); // 1 -> 0
-      this.object.position.addScaledVector(this.dodgeDir, (5 + 6.5 * k) * dt);
-      resolveCircle(this.object.position, PLAYER_RADIUS, colliders, this.floorY);
-      this.object.position.y = this.floorY + Math.sin((1 - k) * Math.PI) * 0.28;
+      const k = Math.max(0, this.dodgeTimer / this.dodgeDuration); // 1 -> 0
+      if (this.slideMode) {
+        // Knee slide: flat and fast, bleeding speed into the asphalt.
+        this.object.position.addScaledVector(this.dodgeDir, (2.5 + 6 * k) * dt);
+        resolveCircle(this.object.position, PLAYER_RADIUS, colliders, this.floorY);
+        this.object.position.y = this.floorY;
+      } else {
+        // Burst fades over the leap; a low ballistic arc sells the jump.
+        this.object.position.addScaledVector(this.dodgeDir, (5 + 6.5 * k) * dt);
+        resolveCircle(this.object.position, PLAYER_RADIUS, colliders, this.floorY);
+        this.object.position.y = this.floorY + Math.sin((1 - k) * Math.PI) * 0.28;
+      }
       // She keeps facing where she was facing — a leap AWAY, not a turn.
       this.object.rotation.y = this.facing;
-      if (this.dodgeTimer <= 0) this.object.position.y = this.floorY;
+      if (this.dodgeTimer <= 0) {
+        this.object.position.y = this.floorY;
+        this.slideMode = false;
+      }
       return;
     }
     if (this.locked) moveDir = null;

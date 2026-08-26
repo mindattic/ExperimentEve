@@ -14,8 +14,12 @@ export class GameState {
   skills: SkillPoints = { health: 0, speed: 0, damage: 0, reload: 0 };
   unspentPoints = 0;
 
-  /** Unlockable abilities, bought with skill points at a lighthouse. */
-  abilities = { rapidFire: false };
+  /**
+   * Unlockable abilities. rapidFire is bought at a lighthouse; taunt and
+   * kneeSlide are learned from rental tapes on a TV/VCR combo — Kingsport's
+   * dojo is the video store.
+   */
+  abilities = { rapidFire: false, taunt: false, kneeSlide: false };
 
   /** Chimeric DNA infusions unlocked by injectors — biology, not magic. */
   infusions: Record<InfusionId, boolean> = {
