@@ -23,6 +23,8 @@ import { Subtitles } from './ui/subtitles';
 import { InventoryMenu } from './ui/inventoryMenu';
 import { loadLevel, triggerContains } from './level/levelLoader';
 import { LEVEL01 } from './level/level01';
+import { AudioEngine } from './audio/audioEngine';
+import { Sfx, AmbienceBed } from './audio/sfx';
 
 // ---- Experiment Eve — Kat Weiss in the Newport North End (M9/M10 greybox).
 
@@ -114,6 +116,21 @@ const statMenu = new StatMenu(hudEl);
 const battle = new BattleSystem(state, scene, hudEl, canvas);
 battle.onMessage = (t) => hud.message(t);
 
+// Audio: everything synthesized; unlocked by the first user gesture.
+const audio = new AudioEngine();
+const sfx = new Sfx(audio);
+const ambience = new AmbienceBed(audio);
+let ambienceStarted = false;
+const unlockAudio = (): void => {
+  audio.unlock();
+  if (!ambienceStarted && audio.unlocked) {
+    ambienceStarted = true;
+    ambience.start();
+  }
+};
+window.addEventListener('keydown', unlockAudio);
+window.addEventListener('pointerdown', unlockAudio);
+
 const muzzleLight = new THREE.PointLight(0xffcc88, 0, 6);
 scene.add(muzzleLight);
 let muzzleTimer = 0;
@@ -121,7 +138,32 @@ battle.onShot = () => {
   muzzleTimer = 0.07;
   muzzleLight.position.copy(player.position).add(new THREE.Vector3(0, 1.3, 0));
   input.rumble(120, 0.4, 0.8);
+  sfx.gunshot();
 };
+
+// City Hall chimes every hour on the hour — gameplay stops to listen, then
+// the message box. Castlevania II: Simon's Quest, quoted directly.
+const curseBox = document.createElement('div');
+curseBox.style.cssText =
+  'position:absolute;left:50%;top:16%;transform:translateX(-50%);display:none;' +
+  'background:#06062a;border:3px solid #3050e8;padding:14px 22px;color:#fff;' +
+  'font-size:16px;letter-spacing:2px;line-height:1.7;max-width:340px;text-align:left';
+curseBox.textContent = 'WHAT A HORRIBLE NIGHT TO HAVE A CURSE.';
+hudEl.appendChild(curseBox);
+
+interface ChimeState {
+  count: number;
+  played: number;
+  timer: number;
+  msgTimer: number;
+}
+let chime: ChimeState | null = null;
+let lastChimedHour = 19; // arrival at 20:00 chimes immediately — eight bells
+let lastStepIndex = 0;
+let lastHp = 80;
+function hourOf(minutes: number): number {
+  return Math.floor(minutes / 60);
+}
 
 // Interact prompt.
 const promptEl = document.createElement('div');
@@ -167,6 +209,7 @@ function handleInteract(i: Interactable): void {
         hud.message('Found: ' + loot.map((l) => `${ITEMS[l.item].name}×${l.n}`).join(', '));
       }
       i.used = true;
+      sfx.pickup();
       break;
     }
     case 'pickup': {
@@ -264,6 +307,7 @@ statMenu.onSave = () => {
   state.flags['garageSaved'] = true;
   state.flags['fireOut'] = true;
   worldClock.elapsed += 8 * 60; // resting costs 8 minutes of the night
+  sfx.saveChime();
   saveGame(state, inventory, player.position.x, player.position.z, worldClock.elapsed);
   hud.message('Saved. Outside, something changes in the light.');
   subtitles.say('The fire\'s dying down. Lucky. ...Lucky?');
@@ -282,7 +326,8 @@ function activeColliders(): readonly Collider[] {
 
 function frame(): void {
   const menuOpen = invMenu.open || statMenu.open;
-  gameClock.timeScale = battle.wantsPause || menuOpen ? 0 : 1;
+  const chiming = chime !== null;
+  gameClock.timeScale = battle.wantsPause || menuOpen || chiming ? 0 : 1;
   const { realDt, gameDt } = gameClock.tick();
   const sample = input.sample();
   const colliders = activeColliders();
@@ -303,12 +348,16 @@ function frame(): void {
   }
 
   if (battle.active) {
-    player.locked = !battle.playerControlled || menuOpen;
-    if (battle.playerControlled && !menuOpen && sample.dodgeJust) player.dodge(moveDir);
+    player.locked = !battle.playerControlled || menuOpen || chiming;
+    if (battle.playerControlled && !menuOpen && !chiming && sample.dodgeJust) {
+      if (player.dodge(moveDir)) sfx.dodgeRoll();
+    }
     battle.update(realDt, gameDt, sample, player, cameraMgr.camera, colliders);
   } else {
-    player.locked = menuOpen;
-    if (!menuOpen && sample.dodgeJust) player.dodge(moveDir);
+    player.locked = menuOpen || chiming;
+    if (!menuOpen && !chiming && sample.dodgeJust) {
+      if (player.dodge(moveDir)) sfx.dodgeRoll();
+    }
     for (const t of level.triggers) {
       if (!t.fired && triggerContains(t, player.position.x, player.position.z)) {
         t.fired = true;
@@ -319,7 +368,25 @@ function frame(): void {
   }
   player.update(gameDt, moveDir, sample.magnitude, colliders);
   rig.pose = battle.phase === 'fire' ? 'aim' : 'explore';
-  rig.update(gameDt, moveDir && !player.locked ? sample.magnitude : 0);
+  const moving = moveDir !== null && !player.locked;
+  rig.update(gameDt, moving ? sample.magnitude : 0);
+
+  // Footsteps on foot-plants (walk phase crosses multiples of pi).
+  if (moving) {
+    const stepIndex = Math.floor(rig.phase / Math.PI);
+    if (stepIndex !== lastStepIndex) {
+      lastStepIndex = stepIndex;
+      const indoor = cameraMgr.activeZone?.id === 'house1' || cameraMgr.activeZone?.id === 'garage';
+      sfx.footstep(indoor);
+    }
+  }
+
+  // Hurt feedback (any source).
+  if (state.hp < lastHp - 0.01) {
+    sfx.hurt();
+    input.rumble(200, 0.6, 1);
+  }
+  lastHp = state.hp;
 
   // Interact.
   const near = !battle.active && !menuOpen ? nearestInteractable() : null;
@@ -334,6 +401,44 @@ function frame(): void {
   // Ambience animation.
   worldClock.tick(realDt); // the night does not pause for menus
   applyTimeOfDay();
+  audio.setDucked(battle.wantsPause || chiming);
+
+  // Fire crackle loudness follows proximity to the burning semi.
+  if (ambienceStarted) {
+    const fireDist = Math.hypot(player.position.x, player.position.z + 22);
+    ambience.setFireIntensity(state.flags['fireOut'] ? 0 : Math.max(0, 1 - fireDist / 22));
+  }
+
+  // Hourly chime: freeze, count the bells, read the curse.
+  const nowHour = hourOf(worldClock.minutesOfDay);
+  if (!chime && nowHour > lastChimedHour && audio.unlocked) {
+    lastChimedHour = nowHour;
+    const h12 = nowHour % 12 === 0 ? 12 : nowHour % 12;
+    chime = { count: h12, played: 0, timer: 0.8, msgTimer: -1 };
+  }
+  if (chime) {
+    player.locked = true;
+    chime.timer -= realDt;
+    if (chime.played < chime.count) {
+      if (chime.timer <= 0) {
+        sfx.bellChime();
+        input.rumble(180, 0.2, 0.4);
+        chime.played++;
+        chime.timer = 1.3;
+      }
+    } else if (chime.msgTimer < 0) {
+      if (chime.timer <= 0) {
+        curseBox.style.display = 'block';
+        chime.msgTimer = 0;
+      }
+    } else {
+      chime.msgTimer += realDt;
+      if (chime.msgTimer > 3.2) {
+        curseBox.style.display = 'none';
+        chime = null;
+      }
+    }
+  }
 
   const t = performance.now() / 1000;
   if (state.flags['fireOut'] && fireGroup.visible) {
