@@ -1,8 +1,15 @@
 import * as THREE from 'three';
 import { LowResPipeline, INTERNAL_WIDTH, INTERNAL_HEIGHT } from './render/ps1/lowResPipeline';
 import { makePS1Material, prepTexture, ps1GlobalUniforms } from './render/ps1/ps1Material';
+import { Input } from './core/input';
+import { CameraZone } from './camera/cameraZone';
+import { CameraManager } from './camera/cameraManager';
+import { InputLatch } from './camera/inputLatch';
+import { PlayerController } from './player/playerController';
+import { segment, type Collider } from './physics/colliders';
 
-// ---- M0-M2 test scene: verifies the PS1 pipeline before game systems land.
+// ---- M3-M6 test level: L-shaped street, three fixed cameras (one rotated
+// 90°, one reversed), latch-driven movement, wall collision.
 
 function makeCheckerTexture(colorA: string, colorB: string, cells = 8): THREE.CanvasTexture {
   const size = 64;
@@ -24,53 +31,100 @@ const pipeline = new LowResPipeline(canvas);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0a12);
-scene.fog = new THREE.Fog(0x0a0a12, 6, 26);
+scene.fog = new THREE.Fog(0x0a0a12, 8, 40);
 
-const camera = new THREE.PerspectiveCamera(60, INTERNAL_WIDTH / INTERNAL_HEIGHT, 0.1, 100);
-camera.position.set(0, 2.2, 6.5);
-camera.lookAt(0, 1, 0);
-
-scene.add(new THREE.HemisphereLight(0x8899bb, 0x221814, 0.9));
-const dir = new THREE.DirectionalLight(0xffeedd, 0.7);
+scene.add(new THREE.HemisphereLight(0x9aa8c8, 0x2a201c, 1.1));
+const dir = new THREE.DirectionalLight(0xffeedd, 0.6);
 dir.position.set(3, 6, 2);
 scene.add(dir);
 
+// Ground
+const groundTex = makeCheckerTexture('#33333c', '#2b2b32', 4);
+groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
+groundTex.repeat.set(16, 16);
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(40, 40, 8, 8),
-  makePS1Material({ map: makeCheckerTexture('#3a3a44', '#2c2c34', 16) }),
+  new THREE.PlaneGeometry(64, 64, 8, 8),
+  makePS1Material({ map: groundTex }),
 );
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-const cube = new THREE.Mesh(
-  new THREE.BoxGeometry(1.6, 1.6, 1.6),
-  makePS1Material({ map: makeCheckerTexture('#b8451f', '#e8d8a0', 8) }),
-);
-cube.position.y = 1.4;
-scene.add(cube);
-
-// A long textured wall close to the camera: the classic case where affine
-// warp is obvious on large triangles at grazing angles.
-const wall = new THREE.Mesh(
-  new THREE.PlaneGeometry(20, 3, 1, 1),
-  makePS1Material({ map: makeCheckerTexture('#41505a', '#333d46', 8) }),
-);
-wall.position.set(0, 1.5, -4);
-scene.add(wall);
-
-for (let i = 0; i < 6; i++) {
-  const pillar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.3, 0.35, 3, 6),
-    makePS1Material({ color: 0x6a5a4a }),
-  );
-  pillar.position.set(-7.5 + i * 3, 1.5, -2.5);
-  scene.add(pillar);
+// Walls: L-shaped corridor. Vertical arm x[-2,2] z[-2,14], horizontal arm
+// x[-2,14] z[-2,2].
+const colliders: Collider[] = [];
+const wallMat = makePS1Material({ map: makeCheckerTexture('#4a4038', '#3c342c', 8) });
+function addWall(ax: number, az: number, bx: number, bz: number): void {
+  colliders.push(segment(ax, az, bx, bz));
+  const len = Math.hypot(bx - ax, bz - az);
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 2.6, 0.25), wallMat);
+  mesh.position.set((ax + bx) / 2, 1.3, (az + bz) / 2);
+  mesh.rotation.y = -Math.atan2(bz - az, bx - ax);
+  scene.add(mesh);
 }
+addWall(-2, 14, -2, -2); // west wall, full length
+addWall(2, 14, 2, 2); //    east wall of vertical arm
+addWall(-2, 14, 2, 14); //  north cap
+addWall(-2, -2, 14, -2); // south wall, full length
+addWall(2, 2, 14, 2); //    north wall of horizontal arm
+addWall(14, 2, 14, -2); //  east cap
+
+// A pillar obstacle in the corner room.
+const pillar = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.4, 0.45, 2.6, 6),
+  makePS1Material({ color: 0x6a5a4a }),
+);
+pillar.position.set(0.9, 1.3, 0.0);
+scene.add(pillar);
+colliders.push(segment(0.9, -0.4, 0.9, 0.4)); // rough pillar blocker
+
+// Camera zones
+const zones = [
+  new CameraZone({
+    id: 'street-south',
+    polygon: [[-2, 2], [2, 2], [2, 14], [-2, 14]],
+    cameraPosition: [0, 3.4, 15.5],
+    cameraLookAt: [0, 1, 6],
+    forward: [0, -1],
+  }),
+  new CameraZone({
+    id: 'corner',
+    polygon: [[-2, -2], [2, -2], [2, 2], [-2, 2]],
+    cameraPosition: [1.8, 4.0, 1.8],
+    cameraLookAt: [-0.9, 0.2, -0.9],
+    forward: [-0.7071, -0.7071],
+  }),
+  new CameraZone({
+    id: 'corridor-east',
+    polygon: [[2, -2], [14, -2], [14, 2], [2, 2]],
+    cameraPosition: [15.5, 2.6, 0],
+    cameraLookAt: [6, 1, 0],
+    forward: [-1, 0],
+  }),
+];
+
+const cameraMgr = new CameraManager(INTERNAL_WIDTH / INTERNAL_HEIGHT);
+cameraMgr.setZones(zones);
+
+// Player: placeholder capsule + nose wedge until the rig lands (M7).
+const player = new PlayerController();
+const capsule = new THREE.Mesh(
+  new THREE.CapsuleGeometry(0.35, 0.9, 3, 8),
+  makePS1Material({ color: 0x8a2c3c }),
+);
+capsule.position.y = 0.8;
+const nose = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.3), makePS1Material({ color: 0xd0c0a0 }));
+nose.position.set(0, 1.15, 0.32);
+player.object.add(capsule, nose);
+player.position.set(0, 0, 12);
+scene.add(player.object);
+
+const input = new Input();
+const latch = new InputLatch();
 
 const hud = document.getElementById('hud')!;
-hud.innerHTML =
-  '<div style="position:absolute;left:8px;bottom:6px;font-size:12px;opacity:.7">' +
-  'P: toggle pipeline &nbsp; O: toggle vertex snap</div>';
+const debugLine = document.createElement('div');
+debugLine.style.cssText = 'position:absolute;left:8px;bottom:6px;font-size:12px;opacity:.75';
+hud.appendChild(debugLine);
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyP') pipeline.enabled = !pipeline.enabled;
@@ -81,10 +135,17 @@ window.addEventListener('keydown', (e) => {
 
 const clock = new THREE.Clock();
 function frame(): void {
-  const dt = clock.getDelta();
-  cube.rotation.y += dt * 0.7;
-  cube.rotation.x += dt * 0.3;
-  pipeline.render(scene, camera);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const sample = input.sample();
+  cameraMgr.update(player.position.x, player.position.z);
+  const moveDir = latch.update(sample, cameraMgr.activeZone);
+  player.update(dt, moveDir, sample.magnitude, colliders);
+  debugLine.textContent =
+    `zone: ${cameraMgr.activeZone?.id ?? '-'}  ` +
+    `pad: ${sample.padConnected ? 'connected' : 'keyboard'}  ` +
+    `pos: ${player.position.x.toFixed(1)},${player.position.z.toFixed(1)}  ` +
+    `[P]ipeline [O]snap`;
+  pipeline.render(scene, cameraMgr.camera);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
