@@ -96,8 +96,10 @@ export class FrogChimera extends Enemy {
   }
 
   private setTongue(ext: number): void {
-    const len = ext * TONGUE_REACH;
-    const dir = this.tongueTarget.clone().sub(this.tongueRoot.getWorldPosition(new THREE.Vector3()));
+    const rootWorld = this.tongueRoot.getWorldPosition(new THREE.Vector3());
+    // Extend TO the target, not past it — the bulb must land where she stood.
+    const len = ext * Math.min(TONGUE_REACH, rootWorld.distanceTo(this.tongueTarget) + 0.15);
+    const dir = this.tongueTarget.clone().sub(rootWorld);
     if (dir.lengthSq() < 0.01) dir.set(0, 0, 1);
     dir.normalize();
     // Segments lay along the (local-space) line toward the target; the whole

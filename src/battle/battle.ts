@@ -41,6 +41,7 @@ export class BattleSystem {
   onMessage: ((text: string) => void) | null = null;
   onShot: (() => void) | null = null;
   onVictory: (() => void) | null = null;
+  onDefeat: (() => void) | null = null;
 
   private readonly dome: THREE.Mesh;
   private readonly targetMarker: THREE.Mesh;
@@ -165,11 +166,9 @@ export class BattleSystem {
         if (this.atb >= 1 && input.confirmJust) {
           this.openMenu();
         }
-        // Death stopgap until the real death screen (M18): reset and flee.
         if (this.state.hp <= 0) {
-          this.state.hp = this.state.maxHp;
-          this.onMessage?.('SHE COLLAPSES — (death screen TBD, restored)');
           this.end();
+          this.onDefeat?.();
           return;
         }
         this.checkVictory(realDt);

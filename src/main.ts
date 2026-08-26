@@ -16,7 +16,8 @@ import { BattleSystem } from './battle/battle';
 import { FrogChimera } from './enemies/frogBoss';
 import { CrowSpider } from './enemies/spider';
 import { StatMenu } from './ui/statMenu';
-import { saveGame } from './gameplay/saveSystem';
+import { saveGame, loadGame, hasSave, applySave } from './gameplay/saveSystem';
+import { TitleScreen } from './ui/titleScreen';
 import type { Collider } from './physics/colliders';
 import { Hud } from './ui/hud';
 import { Subtitles } from './ui/subtitles';
@@ -321,15 +322,85 @@ function activeColliders(): readonly Collider[] {
   return cols;
 }
 
+// ---- Title / death / game-mode flow ----------------------------------
+type GameMode = 'title' | 'game' | 'dead';
+let mode: GameMode = 'title';
+const title = new TitleScreen(hudEl);
+
+function startNewGame(): void {
+  mode = 'game';
+  title.hide();
+}
+
+function continueGame(): void {
+  const data = loadGame();
+  if (!data) {
+    startNewGame();
+    return;
+  }
+  applySave(data, state, inventory);
+  player.position.set(data.pos[0], 0, data.pos[1]);
+  worldClock.elapsed = data.clockElapsed;
+  lastChimedHour = Math.floor(((20 * 60) + data.clockElapsed / 60) / 60);
+  lastHp = state.hp;
+  // Fired one-shot triggers stay fired for boss/story flags.
+  for (const t of level.triggers) {
+    if (t.id === 'frogStreet' && state.flags['frogDead']) t.fired = true;
+    if (t.id === 'blockadeSwarm' && state.flags['giantSpiderDead']) t.fired = true;
+    if (t.id === 'introBark') t.fired = true;
+  }
+  mode = 'game';
+  title.hide();
+}
+
+title.onSelect = (opt) => {
+  unlockAudio();
+  sfx.uiConfirm();
+  if (title.mode === 'title') {
+    if (opt === 'Continue') continueGame();
+    else startNewGame();
+  } else {
+    // Death screen
+    if (opt === 'Retry from the lamp' && hasSave()) {
+      sessionStorage.setItem('eve-auto-continue', '1');
+      location.reload();
+    } else {
+      location.reload();
+    }
+  }
+};
+
+battle.onDefeat = () => {
+  mode = 'dead';
+  title.showDeath(hasSave());
+};
+
+// Boot: retry goes straight back into the night.
+if (sessionStorage.getItem('eve-auto-continue') === '1' && hasSave()) {
+  sessionStorage.removeItem('eve-auto-continue');
+  continueGame();
+} else {
+  title.showTitle(hasSave());
+}
+
 // Dev console handle (also used by automated drive tests).
 (window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player };
 
 function frame(): void {
   const menuOpen = invMenu.open || statMenu.open;
   const chiming = chime !== null;
-  gameClock.timeScale = battle.wantsPause || menuOpen || chiming ? 0 : 1;
+  gameClock.timeScale = battle.wantsPause || menuOpen || chiming || mode !== 'game' ? 0 : 1;
   const { realDt, gameDt } = gameClock.tick();
   const sample = input.sample();
+
+  // Title / death overlays swallow input; scene idles behind them.
+  if (mode !== 'game') {
+    title.update(sample);
+    pipeline.render(scene, cameraMgr.camera);
+    if (cameraMgr.activeZone === null) cameraMgr.update(player.position.x, player.position.z, realDt);
+    requestAnimationFrame(frame);
+    return;
+  }
   const colliders = activeColliders();
 
   cameraMgr.update(player.position.x, player.position.z, realDt);
