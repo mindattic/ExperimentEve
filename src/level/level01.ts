@@ -231,7 +231,7 @@ export const LEVEL01: LevelDef = {
     { id: 'trash2', x: -3.1, z: -12, prompt: 'Search the trash can', kind: 'container', roomType: 'street', containerType: 'trash' },
     {
       id: 'pawnDoor', x: 9, z: 5.6, prompt: 'Try the pawnshop door', kind: 'inspect', once: false,
-      inspectText: 'Barred shut. A sign: "BACK IN 5." It has been longer than five.',
+      inspectText: 'Barred shut. Two signs: "CLOSED SUNDAYS" and "BACK IN 5." Both are lying differently.',
     },
     {
       id: 'graffiti1', x: -11, z: 0.7, prompt: 'Inspect the graffiti', kind: 'pickup',
@@ -249,6 +249,10 @@ export const LEVEL01: LevelDef = {
       inspectText: 'MEGAHIT VIDEO — NEW RELEASE: SINKING SHIP. The return slot is jammed with tapes. Every one of them is Sinking Ship.',
     },
     { id: 'ansMachine1', x: -4.8, z: 23, prompt: 'Play the answering machine', kind: 'inspect', once: false },
+    {
+      id: 'dadCard', x: -4.5, z: 24.8, prompt: 'Look at the card', kind: 'inspect', once: false,
+      inspectText: 'A Father\'s Day card, signed by three kids in three colors. Sealed. Today was Father\'s Day.',
+    },
     {
       id: 'zelnaPoster', x: -9.5, z: 26.6, prompt: 'Look at the poster', kind: 'inspect', once: false,
       inspectText: 'SAGA OF ZELNA: FLUTE OF AGES — "Coming Christmas 1998." The date is circled in marker. Twice.',

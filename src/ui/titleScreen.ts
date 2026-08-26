@@ -22,7 +22,7 @@ export class TitleScreen {
     this.index = 0;
     this.render(
       'EXPERIMENT EVE',
-      'June 21, 1998 — the shortest night of the year',
+      'Sunday, June 21, 1998 — the shortest night of the year',
     );
   }
 
