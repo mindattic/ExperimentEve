@@ -6,6 +6,7 @@ import { CameraZone } from './camera/cameraZone';
 import { CameraManager } from './camera/cameraManager';
 import { InputLatch } from './camera/inputLatch';
 import { PlayerController } from './player/playerController';
+import { PlayerRig } from './player/playerRig';
 import { segment, type Collider } from './physics/colliders';
 
 // ---- M3-M6 test level: L-shaped street, three fixed cameras (one rotated
@@ -42,8 +43,10 @@ scene.add(dir);
 const groundTex = makeCheckerTexture('#33333c', '#2b2b32', 4);
 groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
 groundTex.repeat.set(16, 16);
+// Heavily tessellated: affine mapping skews wildly on large triangles, so
+// big flat surfaces need small triangles — exactly what real PS1 games did.
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(64, 64, 8, 8),
+  new THREE.PlaneGeometry(64, 64, 48, 48),
   makePS1Material({ map: groundTex }),
 );
 ground.rotation.x = -Math.PI / 2;
@@ -56,7 +59,10 @@ const wallMat = makePS1Material({ map: makeCheckerTexture('#4a4038', '#3c342c', 
 function addWall(ax: number, az: number, bx: number, bz: number): void {
   colliders.push(segment(ax, az, bx, bz));
   const len = Math.hypot(bx - ax, bz - az);
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 2.6, 0.25), wallMat);
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(len, 2.6, 0.25, Math.max(1, Math.ceil(len / 1.5)), 2, 1),
+    wallMat,
+  );
   mesh.position.set((ax + bx) / 2, 1.3, (az + bz) / 2);
   mesh.rotation.y = -Math.atan2(bz - az, bx - ax);
   scene.add(mesh);
@@ -105,16 +111,10 @@ const zones = [
 const cameraMgr = new CameraManager(INTERNAL_WIDTH / INTERNAL_HEIGHT);
 cameraMgr.setZones(zones);
 
-// Player: placeholder capsule + nose wedge until the rig lands (M7).
+// Player with the procedural rig (M7).
 const player = new PlayerController();
-const capsule = new THREE.Mesh(
-  new THREE.CapsuleGeometry(0.35, 0.9, 3, 8),
-  makePS1Material({ color: 0x8a2c3c }),
-);
-capsule.position.y = 0.8;
-const nose = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.3), makePS1Material({ color: 0xd0c0a0 }));
-nose.position.set(0, 1.15, 0.32);
-player.object.add(capsule, nose);
+const rig = new PlayerRig();
+player.object.add(rig.root);
 player.position.set(0, 0, 12);
 scene.add(player.object);
 
@@ -140,6 +140,7 @@ function frame(): void {
   cameraMgr.update(player.position.x, player.position.z);
   const moveDir = latch.update(sample, cameraMgr.activeZone);
   player.update(dt, moveDir, sample.magnitude, colliders);
+  rig.update(dt, moveDir ? sample.magnitude : 0);
   debugLine.textContent =
     `zone: ${cameraMgr.activeZone?.id ?? '-'}  ` +
     `pad: ${sample.padConnected ? 'connected' : 'keyboard'}  ` +
