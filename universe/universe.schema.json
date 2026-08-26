@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mindattic:universe.schema.json",
+  "title": "MindAttic Universe Interchange",
+  "description": "Prose-agnostic universe file: one universe, many typed entities with relations. Designed to be imported into Prose as a Universe and consumed by games/tools via CLI or MCP.",
+  "type": "object",
+  "required": ["universe", "entities"],
+  "properties": {
+    "universe": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "name": { "type": "string" },
+        "tagline": { "type": "string" },
+        "era": { "type": "string" },
+        "setting": { "type": "string" },
+        "logline": { "type": "string" },
+        "rules": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "name", "summary"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "type": {
+            "type": "string",
+            "description": "Open set; core types below.",
+            "examples": ["character", "faction", "creature", "location", "artifact", "event", "rule", "organization", "concept"]
+          },
+          "name": { "type": "string" },
+          "summary": { "type": "string" },
+          "details": { "type": "object", "additionalProperties": true },
+          "relations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["to", "kind"],
+              "properties": {
+                "to": { "type": "string", "description": "Entity id (dangling allowed; marks future work)" },
+                "kind": { "type": "string" }
+              }
+            }
+          },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
