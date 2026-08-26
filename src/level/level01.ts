@@ -275,6 +275,14 @@ export const LEVEL01: LevelDef = {
       inspectText: 'Sprayed in careful block letters: THE BUG IS COMING 01/01/00. Eighteen months early, and wrong about which one.',
     },
     {
+      id: 'islandView', x: -12.5, z: 36, prompt: 'Look across the water', kind: 'inspect', once: false,
+      inspectText: 'The island is lit up like a shift change. Boats run out every few minutes. They come back empty.',
+    },
+    {
+      id: 'islandTag', x: -13, z: 3, prompt: 'Read the argument on the wall', kind: 'inspect', once: false,
+      inspectText: 'SOAK: "THEY TAKE THEM TO THE ISLAND." REN, underneath, in red: "the island was FIRST." Someone has underlined FIRST three times.',
+    },
+    {
       id: 'rayCard', x: 29.4, z: 0.6, prompt: 'Look at the construction-paper card', kind: 'inspect', once: false,
       inspectText: 'HAPPY FATHER\'S DAY DAD — two crayon hands, two names. Waiting on his workbench. The flatbed never came back.',
     },
