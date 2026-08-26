@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const HUB = 'http://127.0.0.1:5900';
-const PROSE_CMD = 'D:\\Projects\\MindAttic\\Prose\\prose.cmd';
+const PROSE_CLI_PROJ = 'D:\\Projects\\MindAttic\\Prose\\v3\\Prose.Cli';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const file = join(here, '..', 'universe', 'eve.universe.json');
@@ -100,9 +100,11 @@ switch (cmd) {
     break;
   }
   case 'push': {
-    const r = spawnSync('cmd.exe', ['/c', PROSE_CMD, '--universe-import', file], {
-      stdio: 'inherit',
-    });
+    const r = spawnSync(
+      'dotnet',
+      ['run', '--project', PROSE_CLI_PROJ, '--', '--universe-import', file],
+      { stdio: 'inherit', shell: false },
+    );
     if (r.status !== 0) {
       fail('push failed — prose --universe-import is built by RFC 0007 (/eve in the Prose CLI).');
     }
