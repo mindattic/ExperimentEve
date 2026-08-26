@@ -50,6 +50,14 @@ export class GameState {
     return 1.6 * Math.max(0.4, 1 - this.skills.reload * 0.07);
   }
 
+  /** Move rounds from reserve into the clip. Returns rounds loaded. */
+  reload(): number {
+    const need = Math.min(this.clipSize - this.ammoInClip, this.reserveAmmo);
+    this.ammoInClip += need;
+    this.reserveAmmo -= need;
+    return need;
+  }
+
   addLimit(amount: number): void {
     this.limit = Math.min(100, this.limit + amount);
   }

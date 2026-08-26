@@ -737,6 +737,11 @@ function frame(): void {
       }
     }
     state.regen(gameDt);
+    // Walking is when she tops the clip off. No drama out here.
+    if (state.ammoInClip < state.clipSize && state.reserveAmmo > 0) {
+      const n = state.reload();
+      if (n > 0) hud.message(`Reloaded. ${state.ammoInClip}/${state.clipSize}.`);
+    }
     // Erasure vignette: detection + the Execution opener.
     squad.update(gameDt, player.position, moveDir ? sample.magnitude : 0, colliders);
     executionMark = squad.executionCandidate(player.position);

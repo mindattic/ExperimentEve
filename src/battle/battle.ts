@@ -227,6 +227,20 @@ export class BattleSystem {
         enabled: s.ammoInClip > 0,
         action: () => this.openAim(),
       },
+      ...(s.ammoInClip < s.clipSize && s.reserveAmmo > 0
+        ? [
+            {
+              label: `Reload  [${s.reserveAmmo} reserve]`,
+              enabled: true,
+              action: () => {
+                const n = s.reload();
+                this.onMessage?.(`${n} rounds. Hands steadier than they should be.`);
+                this.meleePending = true;
+                this.beginFire(s.reloadSeconds); // rooted for the reload
+              },
+            },
+          ]
+        : []),
       {
         label: 'PE: Heal  (25 PE)',
         enabled: s.pe >= 25 && s.hp < s.maxHp,
