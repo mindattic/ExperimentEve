@@ -13,6 +13,12 @@ export class LowResPipeline {
   private readonly rt: THREE.WebGLRenderTarget;
   private readonly blitScene = new THREE.Scene();
   private readonly blitCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  private blitUniforms!: Record<string, THREE.IUniform>;
+
+  /** CCTV warped-lens amount for the active camera zone (0 = normal). */
+  setDistortion(v: number): void {
+    this.blitUniforms['uDistortion']!.value = v;
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -34,12 +40,14 @@ export class LowResPipeline {
         tDiffuse: { value: this.rt.texture },
         uInternalResolution: { value: new THREE.Vector2(INTERNAL_WIDTH, INTERNAL_HEIGHT) },
         uDitherStrength: { value: 1.0 },
+        uDistortion: { value: 0.0 },
       },
       vertexShader: blitVertexShader,
       fragmentShader: blitFragmentShader,
       depthTest: false,
       depthWrite: false,
     });
+    this.blitUniforms = blitMaterial.uniforms;
     const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blitMaterial);
     quad.frustumCulled = false;
     this.blitScene.add(quad);

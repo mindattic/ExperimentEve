@@ -25,25 +25,42 @@ export class CameraManager {
     return this.active;
   }
 
-  update(playerX: number, playerZ: number): void {
+  private readonly trackTarget = new THREE.Vector3();
+
+  update(playerX: number, playerZ: number, dt = 0): void {
     const current = this.active;
     if (current && current.contains(playerX, playerZ, current.hysteresisMargin)) {
+      this.trackCCTV(current, playerX, playerZ, dt);
       return; // still held by the active zone
     }
     for (const zone of this.zones) {
       if (zone !== current && zone.contains(playerX, playerZ, 0)) {
         this.cut(zone);
+        this.trackCCTV(zone, playerX, playerZ, 1); // snap onto her at cut
         return;
       }
     }
     // In no zone's core (doorway gaps, etc.): keep the current camera.
+    if (current) this.trackCCTV(current, playerX, playerZ, dt);
   }
+
+  /** CCTV zones pan (with servo lag) to keep the player framed. */
+  private trackCCTV(zone: CameraZone, playerX: number, playerZ: number, dt: number): void {
+    if (zone.mode !== 'cctv') return;
+    this.trackTarget.set(playerX, 0.9, playerZ);
+    const lerp = Math.min(1, dt * 2.2);
+    this.lookAtSmoothed.lerp(this.trackTarget, lerp);
+    this.camera.lookAt(this.lookAtSmoothed);
+  }
+
+  private readonly lookAtSmoothed = new THREE.Vector3();
 
   private cut(zone: CameraZone): void {
     this.active = zone;
     this.cutCount++;
     this.camera.position.copy(zone.cameraPosition);
     this.camera.lookAt(zone.cameraLookAt);
+    this.lookAtSmoothed.copy(zone.cameraLookAt);
     this.camera.fov = zone.fov;
     this.camera.updateProjectionMatrix();
     this.onCut?.(zone);

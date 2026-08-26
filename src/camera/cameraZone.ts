@@ -15,6 +15,10 @@ export interface CameraZoneDef {
   fov?: number;
   /** Extra margin the player must exit past before this zone lets go. */
   hysteresisMargin?: number;
+  /** 'cctv': fixed mount that PANS to track the player (observer feel). */
+  mode?: 'fixed' | 'cctv';
+  /** Barrel distortion 0..~0.5 for warped-lens CCTV zones. */
+  fisheye?: number;
 }
 
 export class CameraZone {
@@ -26,6 +30,8 @@ export class CameraZone {
   readonly right: THREE.Vector3;
   readonly fov: number;
   readonly hysteresisMargin: number;
+  readonly mode: 'fixed' | 'cctv';
+  readonly fisheye: number;
 
   constructor(def: CameraZoneDef) {
     this.id = def.id;
@@ -43,6 +49,8 @@ export class CameraZone {
     }
     this.fov = def.fov ?? 55;
     this.hysteresisMargin = def.hysteresisMargin ?? 0.5;
+    this.mode = def.mode ?? 'fixed';
+    this.fisheye = def.fisheye ?? 0;
   }
 
   /** Point-in-convex-polygon; positive margin inflates the polygon. */
