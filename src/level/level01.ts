@@ -1,8 +1,8 @@
 import type { LevelDef } from './levelTypes';
 
-// Newport, RI — North End by the rail line. Greybox pass (M10).
+// Kingsport North End by the Colony Line rails (design ref: Newport, RI).
 // +Z is "north" (toward the tracks); she works her way SOUTH toward the
-// Pell Bridge approach, then east through chain-link corridors to the garage.
+// Bell Bridge approach, then east through chain-link corridors to the garage.
 //
 // Areas: tracks (z 30..40) -> street A (z 6..30, house1 enterable on the
 // west side) -> cross street (z 0..6, pawnshop + graffiti) -> south street

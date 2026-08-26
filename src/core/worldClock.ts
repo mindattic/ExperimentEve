@@ -1,4 +1,5 @@
-// The whole game is one night: June 21, 1998, Newport RI (41.49°N).
+// The whole game is one night: Sunday, June 21, 1998, Kingsport (41.49°N —
+// design ref: Newport, RI).
 // Kat arrives at exactly 8:00 PM EDT. Sunset 8:23 PM. Sunrise 5:11 AM.
 // Ticks 1:1 with real time (scale is a dev knob, not a gameplay one).
 

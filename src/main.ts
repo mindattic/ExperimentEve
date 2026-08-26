@@ -31,7 +31,8 @@ import { WorldAI } from './enemies/worldAI';
 import { ScareDirector } from './gameplay/scares';
 import { ErasureSquad } from './gameplay/erasureSquad';
 
-// ---- Experiment Eve — Kat Weiss in the Newport North End (M9/M10 greybox).
+// ---- Experiment Eve — Kat Weiss in Kingsport's North End (design ref:
+// Newport, RI; in-game names are winks only — see docs/GAZETTEER.md).
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const hudEl = document.getElementById('hud')!;
