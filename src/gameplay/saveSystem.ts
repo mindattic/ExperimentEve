@@ -6,6 +6,11 @@ const KEY = 'eve-save';
 export interface SaveData {
   skills: GameState['skills'];
   unspentPoints: number;
+  level?: number;
+  xp?: number;
+  abilities?: GameState['abilities'];
+  infusions?: GameState['infusions'];
+  equipped?: GameState['equipped'];
   hp: number;
   maxHp: number;
   pe: number;
@@ -31,6 +36,11 @@ export function saveGame(
   const data: SaveData = {
     skills: { ...state.skills },
     unspentPoints: state.unspentPoints,
+    level: state.level,
+    xp: state.xp,
+    abilities: { ...state.abilities },
+    infusions: { ...state.infusions },
+    equipped: { ...state.equipped },
     hp: state.hp,
     maxHp: state.maxHp,
     pe: state.pe,
@@ -65,6 +75,11 @@ export function hasSave(): boolean {
 export function applySave(data: SaveData, state: GameState, inv: Inventory): void {
   state.skills = { ...data.skills };
   state.unspentPoints = data.unspentPoints;
+  state.level = data.level ?? 1;
+  state.xp = data.xp ?? 0;
+  state.abilities = { rapidFire: false, ...data.abilities };
+  state.infusions = { ...state.infusions, ...data.infusions };
+  state.equipped = { ...data.equipped };
   state.recomputeDerived();
   state.hp = data.hp;
   state.pe = data.pe;

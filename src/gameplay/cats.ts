@@ -19,14 +19,24 @@ export interface CatDef {
   escape?: [number, number];
 }
 
-interface Cat {
+export interface Cat {
   def: CatDef;
   group: THREE.Group;
   tail: THREE.Object3D;
   head: THREE.Object3D;
-  state: 'idle' | 'bolt' | 'gone';
+  state: 'idle' | 'bolt' | 'gone' | 'descend' | 'approach';
   respawn: number;
   idlePhase: number;
+  petted: boolean;
+}
+
+/** A petted cat answering the debt: dash in, one guaranteed crit, gone. */
+interface Striker {
+  group: THREE.Group;
+  target: THREE.Object3D;
+  phase: 'in' | 'out';
+  onHit: () => void;
+  retreat: THREE.Vector3;
 }
 
 const COATS: Record<CatDef['coat'], { body: number; head: number; tail: number; patch?: number; eyes: number }> = {
@@ -86,17 +96,57 @@ function buildCat(coat: CatDef['coat']): { group: THREE.Group; tail: THREE.Objec
 
 export class Cats {
   private cats: Cat[] = [];
+  private strikers: Striker[] = [];
   /** Fires once, the first time Kat gets a good look at any of them. */
   onFirstSight: (() => void) | null = null;
   private sighted = false;
 
-  constructor(scene: THREE.Scene, defs: CatDef[]) {
+  constructor(private readonly scene: THREE.Scene, defs: CatDef[]) {
     for (const def of defs) {
       const { group, tail, head } = buildCat(def.coat);
       group.position.set(def.x, def.y, def.z);
       scene.add(group);
-      this.cats.push({ def, group, tail, head, state: 'idle', respawn: 0, idlePhase: Math.random() * 10 });
+      this.cats.push({ def, group, tail, head, state: 'idle', respawn: 0, idlePhase: Math.random() * 10, petted: false });
     }
+  }
+
+  /** Coats of every petted cat — the pool of possible battle allies. */
+  get pettedCoats(): CatDef['coat'][] {
+    return this.cats.filter((c) => c.petted).map((c) => c.def.coat);
+  }
+
+  /** A trusted, unpetted cat close enough to touch, if any. */
+  petCandidate(playerPos: THREE.Vector3, trusted: boolean): Cat | null {
+    if (!trusted) return null;
+    for (const c of this.cats) {
+      if (c.petted || !c.group.visible) continue;
+      if (c.state !== 'idle' && c.state !== 'approach') continue;
+      if (c.group.position.distanceTo(playerPos) < 1.6) return c;
+    }
+    return null;
+  }
+
+  /** Pet it. (It was never dangerous.) */
+  pet(cat: Cat): void {
+    cat.petted = true;
+    cat.idlePhase = 0;
+  }
+
+  /**
+   * A petted cat answers during battle: streaks in from off screen, lands
+   * one guaranteed crit (onHit fires at contact), and retreats into the dark.
+   */
+  strike(coat: CatDef['coat'], target: THREE.Object3D, onHit: () => void): void {
+    const { group } = buildCat(coat);
+    group.scale.set(1, 0.85, 1.3); // full-stretch run
+    const angle = Math.random() * Math.PI * 2;
+    const from = target.position.clone().add(new THREE.Vector3(Math.sin(angle) * 12, 0, Math.cos(angle) * 12));
+    from.y = 0;
+    group.position.copy(from);
+    this.scene.add(group);
+    const retreat = target.position.clone().add(new THREE.Vector3(Math.sin(angle + Math.PI) * 16, 0, Math.cos(angle + Math.PI) * 16));
+    retreat.y = 0;
+    this.strikers.push({ group, target, phase: 'in', onHit, retreat });
   }
 
   /** Dev/test visibility. */
@@ -111,8 +161,32 @@ export class Cats {
     }));
   }
 
-  update(dt: number, playerPos: THREE.Vector3): void {
+  update(dt: number, playerPos: THREE.Vector3, trusted = false): void {
     if (dt <= 0) return;
+
+    // Battle allies streak through regardless of the daily routine.
+    for (const s of this.strikers) {
+      const goal = s.phase === 'in' ? s.target.position : s.retreat;
+      const dir = goal.clone().sub(s.group.position).setY(0);
+      const remaining = dir.length();
+      if (s.phase === 'in' && remaining < 0.7) {
+        s.onHit();
+        s.phase = 'out';
+        continue;
+      }
+      if (s.phase === 'out' && remaining < 1.2) {
+        this.scene.remove(s.group);
+        s.group.position.y = -99; // mark done
+        continue;
+      }
+      dir.normalize();
+      s.group.position.addScaledVector(dir, 8.5 * dt);
+      // Low pounce-lope: the run reads at PS1 res.
+      s.group.position.y = Math.abs(Math.sin(s.group.position.x * 3 + s.group.position.z * 3)) * 0.12;
+      s.group.rotation.y = Math.atan2(dir.x, dir.z);
+    }
+    this.strikers = this.strikers.filter((s) => s.group.position.y > -50);
+
     for (const c of this.cats) {
       const pos = c.group.position;
       switch (c.state) {
@@ -135,8 +209,40 @@ export class Cats {
             this.sighted = true;
             this.onFirstSight?.();
           }
-          if (c.def.kind === 'skitter' && dist < 5.5) {
+          if (trusted && dist < 7) {
+            // She's earned it. Watchers come down; skitters come over.
+            c.state = c.def.kind === 'watcher' && pos.y > 0.5 ? 'descend' : 'approach';
+            break;
+          }
+          if (!trusted && c.def.kind === 'skitter' && dist < 5.5) {
             c.state = 'bolt';
+          }
+          break;
+        }
+        case 'descend': {
+          // Hop down the wall face — cats always know a way down.
+          pos.y = Math.max(0, pos.y - 3.2 * dt);
+          if (pos.y <= 0) c.state = 'approach';
+          break;
+        }
+        case 'approach': {
+          c.idlePhase += dt;
+          c.tail.rotation.z = Math.sin(c.idlePhase * 2.3) * 0.35;
+          const toKat = playerPos.clone().sub(pos).setY(0);
+          const dist = toKat.length();
+          if (!trusted) {
+            // Trust withdrawn (fresh run) — back to the old wariness.
+            c.state = 'idle';
+            break;
+          }
+          if (dist > 1.1 && dist < 12) {
+            toKat.normalize();
+            pos.addScaledVector(toKat, 1.3 * dt);
+            c.group.rotation.y = Math.atan2(toKat.x, toKat.z);
+          } else if (dist <= 1.1) {
+            // Close enough to be pettable: face her, purr-sway.
+            c.group.rotation.y = Math.atan2(toKat.x, toKat.z);
+            c.group.rotation.z = Math.sin(c.idlePhase * 3.1) * (c.petted ? 0.1 : 0.04);
           }
           break;
         }

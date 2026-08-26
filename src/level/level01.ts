@@ -388,6 +388,11 @@ export const LEVEL01: LevelDef = {
     },
     { id: 'car1', x: 0, z: 1.2, prompt: 'Salvage the dead sedan', kind: 'salvage', salvageType: 'car' },
     { id: 'car2', x: -1.6, z: -13.2, prompt: 'Salvage the dead wagon', kind: 'salvage', salvageType: 'car' },
+    // Car doors: almost always "Locked." — except when they aren't, and then
+    // it's either loot or teeth. Every check is a bet.
+    { id: 'carDoor1', x: 1.2, z: 2.6, prompt: 'Check the car door', kind: 'carDoor', once: false },
+    { id: 'carDoor2', x: -0.6, z: -14.5, prompt: 'Check the van door', kind: 'carDoor', once: false },
+    { id: 'carDoor3', x: -7.6, z: -20.2, prompt: 'Check the cruiser door', kind: 'carDoor', once: false },
     {
       id: 'yardCache', x: 20.5, z: -12, prompt: 'Open the tow-truck toolbox', kind: 'pickup',
       inspectText: 'A dented toolbox, left where someone would find it. Rounds, a first-aid kit, and no note.',

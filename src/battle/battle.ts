@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Enemy, EnemyPart } from '../enemies/enemyBase';
 import type { GameState } from '../gameplay/gameState';
 import type { Inventory } from '../gameplay/inventory';
+import { INFUSIONS } from '../gameplay/infusions';
 import type { InputSample } from '../core/input';
 import type { PlayerController } from '../player/playerController';
 import type { Collider } from '../physics/colliders';
@@ -34,6 +35,7 @@ export class BattleSystem {
   private targets: TargetEntry[] = [];
   private targetIndex = 0;
   private fireTimer = 0;
+  private rapidPending = false;
   private pendingCrit: 'none' | 'weak' | 'body' | 'miss' = 'none';
   private sweepT = 0;
   private lockedY = 0.5;
@@ -154,7 +156,7 @@ export class BattleSystem {
         dealDamageToPlayer: (amount: number) => this.state.damagePlayer(amount),
       };
       for (const e of this.enemies) {
-        if (!e.dead) e.updateBattle(gameDt, ctx);
+        if (!e.dead && !e.tickStun(gameDt)) e.updateBattle(gameDt, ctx);
       }
       this.state.regen(gameDt);
     }
@@ -244,20 +246,109 @@ export class BattleSystem {
           ]
         : []),
       {
-        label: 'PE: Heal  (25 PE)',
+        label: 'Proliferation — heal 30  (25 PE)',
         enabled: s.pe >= 25 && s.hp < s.maxHp,
         action: () => {
           s.pe -= 25;
           s.hp = Math.min(s.maxHp, s.hp + 30);
-          this.onMessage?.('Parasite energy knits the wounds shut.');
+          this.onMessage?.('Forced cell division knits the wounds shut.');
           this.spendTurn();
         },
       },
+      // Chimeric DNA infusions — body functions at gunpoint, per injector.
+      ...(s.infusions.combustion
+        ? [{
+            label: `Combustion  (${INFUSIONS.combustion.peCost} PE)`,
+            enabled: s.pe >= INFUSIONS.combustion.peCost && this.enemiesAlive.length > 0,
+            action: () => {
+              s.pe -= INFUSIONS.combustion.peCost;
+              const t = this.nearestEnemy();
+              if (t) {
+                const dealt = t.takeHit(40, null);
+                this.onDamage?.(t.object.position.clone().add(new THREE.Vector3(0, 1.2, 0)), dealt, false);
+                this.onMessage?.(`COMBUSTION — ${t.displayName} ignites from the inside. ${dealt}.`);
+                if (t.dead) this.onMessage?.(`${t.displayName} burns down.`);
+              }
+              this.spendTurn();
+            },
+          }]
+        : []),
+      ...(s.infusions.cryostasis
+        ? [{
+            label: `Cryostasis  (${INFUSIONS.cryostasis.peCost} PE)`,
+            enabled: s.pe >= INFUSIONS.cryostasis.peCost && this.enemiesAlive.length > 0,
+            action: () => {
+              s.pe -= INFUSIONS.cryostasis.peCost;
+              const t = this.nearestEnemy();
+              if (t) {
+                t.stun(4);
+                this.onMessage?.(`CRYOSTASIS — the heat leaves ${t.displayName}. It goes still.`);
+              }
+              this.spendTurn();
+            },
+          }]
+        : []),
+      ...(s.infusions.neuroelectric
+        ? [{
+            label: `Neuroelectric  (${INFUSIONS.neuroelectric.peCost} PE)`,
+            enabled: s.pe >= INFUSIONS.neuroelectric.peCost && this.enemiesAlive.length > 0,
+            action: () => {
+              s.pe -= INFUSIONS.neuroelectric.peCost;
+              for (const e of this.enemiesAlive) {
+                const dealt = e.takeHit(20, null);
+                e.stun(0.7);
+                this.onDamage?.(e.object.position.clone().add(new THREE.Vector3(0, 1.2, 0)), dealt, false);
+              }
+              this.onMessage?.('NEUROELECTRIC — every nerve is a wire. She crosses them.');
+              this.spendTurn();
+            },
+          }]
+        : []),
+      ...(s.infusions.mitosis
+        ? [{
+            label: `Mitosis  (${INFUSIONS.mitosis.peCost} PE)`,
+            enabled: s.pe >= INFUSIONS.mitosis.peCost && this.enemiesAlive.length > 0,
+            action: () => {
+              s.pe -= INFUSIONS.mitosis.peCost;
+              const t = this.nearestEnemy();
+              if (t) {
+                t.growTumor();
+                this.onMessage?.(`MITOSIS — a tumorous wound blooms on ${t.displayName}. Burst it.`);
+              }
+              this.spendTurn();
+            },
+          }]
+        : []),
+      ...(s.infusions.metabolicBurn
+        ? [{
+            label: `Metabolic Burn  (${INFUSIONS.metabolicBurn.peCost} PE, -5 HP)`,
+            enabled: s.pe >= INFUSIONS.metabolicBurn.peCost && s.hasteTimer <= 0,
+            action: () => {
+              s.pe -= INFUSIONS.metabolicBurn.peCost;
+              s.hp = Math.max(1, s.hp - 5);
+              s.hasteTimer = 20;
+              this.onMessage?.('METABOLIC BURN — she redlines. Everything else slows down.');
+              this.spendTurn();
+            },
+          }]
+        : []),
       {
         label: `Precision Aim  (LIMIT${s.limit >= 100 ? ' READY' : ` ${Math.floor(s.limit)}%`})`,
         enabled: s.limit >= 100 && s.ammoInClip > 0,
         action: () => this.openSweep(),
       },
+      ...(s.abilities.rapidFire
+        ? [
+            {
+              label: `Rapid Fire  (dump ${s.ammoInClip} rounds)`,
+              enabled: s.ammoInClip > 1,
+              action: () => {
+                this.rapidPending = true;
+                this.openAim();
+              },
+            },
+          ]
+        : []),
       ...(this.inv && this.inv.count('molotov') > 0
         ? [
             {
@@ -435,6 +526,7 @@ export class BattleSystem {
     this.targetMarker.lookAt((camera as THREE.PerspectiveCamera).position);
 
     if (input.dodgeJust) {
+      this.rapidPending = false;
       this.dome.visible = false;
       this.targetMarker.visible = false;
       this.openMenu();
@@ -444,7 +536,8 @@ export class BattleSystem {
       this.dome.visible = false;
       this.targetMarker.visible = false;
       this.pendingCrit = 'none';
-      this.beginFire(0.4);
+      // Rapid fire roots her longer: the whole clip goes downrange.
+      this.beginFire(this.rapidPending ? 0.9 : 0.4);
     }
   }
 
@@ -539,6 +632,11 @@ export class BattleSystem {
   }
 
   private resolveShot(): void {
+    if (this.rapidPending) {
+      this.rapidPending = false;
+      this.resolveRapid();
+      return;
+    }
     const s = this.state;
     if (s.ammoInClip <= 0) return;
     s.ammoInClip--;
@@ -560,6 +658,10 @@ export class BattleSystem {
       dealt = t.enemy.takeHit(s.gunDamage * 6, null); // crit ignores overrides
       this.onMessage?.(`CRITICAL — ${dealt} damage!`);
       this.onDamage?.(wound, dealt, true);
+      if (!t.enemy.dead) {
+        t.enemy.stun(1.8);
+        this.onMessage?.(`${t.enemy.displayName} reels.`);
+      }
     } else if (this.pendingCrit === 'body') {
       dealt = t.enemy.takeHit(s.gunDamage * 2, null);
       this.onMessage?.(`Precision hit — ${dealt} damage.`);
@@ -572,9 +674,55 @@ export class BattleSystem {
           : `${t.part.tag} hit — ${dealt} damage.`,
       );
       // Weak-point anatomy is this game's crit.
-      this.onDamage?.(wound, dealt, t.part.weakPoint || t.part.damageMultiplier > 1);
+      const crit = t.part.weakPoint || t.part.damageMultiplier > 1;
+      this.onDamage?.(wound, dealt, crit);
+      if (crit && !t.enemy.dead) t.enemy.stun(1.2);
     }
     s.addLimit(dealt * 0.6);
+    if (t.enemy.dead) this.onMessage?.(`${t.enemy.displayName} is destroyed.`);
+    this.pendingCrit = 'none';
+    this.spendTurn();
+  }
+
+  /**
+   * Rapid Fire: the whole clip at one target. Every round rolls its own
+   * spray-and-pray miss (the aim penalty); a few land hot (burst rounds).
+   * The damage spike itself trips the sustained-damage stun.
+   */
+  private resolveRapid(): void {
+    const s = this.state;
+    const rounds = s.ammoInClip;
+    s.ammoInClip = 0;
+    this.onShot?.();
+    const t = this.targets[this.targetIndex];
+    if (!t || t.enemy.dead || rounds <= 0) {
+      this.spendTurn();
+      return;
+    }
+    const wound = t.part.node.getWorldPosition(new THREE.Vector3());
+    let hits = 0;
+    let total = 0;
+    for (let i = 0; i < rounds; i++) {
+      if (Math.random() < 0.3) continue; // aim penalty: some rounds spray wide
+      let dmg = s.gunDamage;
+      let burst = false;
+      if (Math.random() < 0.12) {
+        dmg *= 3; // burst round
+        burst = true;
+      }
+      const dealt = t.enemy.takeHit(dmg, t.part);
+      this.onDamage?.(wound, dealt, burst);
+      total += dealt;
+      hits++;
+      if (t.enemy.dead) break;
+    }
+    this.onMessage?.(
+      hits === 0
+        ? 'The whole clip finds nothing but air.'
+        : `RAPID FIRE — ${hits}/${rounds} land for ${total}.`,
+    );
+    if (!t.enemy.dead && t.enemy.stunned) this.onMessage?.(`${t.enemy.displayName} is staggered!`);
+    s.addLimit(total * 0.6);
     if (t.enemy.dead) this.onMessage?.(`${t.enemy.displayName} is destroyed.`);
     this.pendingCrit = 'none';
     this.spendTurn();
@@ -587,8 +735,10 @@ export class BattleSystem {
     if (this.enemiesAlive.length === 0 && this.enemies.length > 0) {
       this.phase = 'won';
       this.victoryTimer = 1.4;
-      this.state.unspentPoints += this.enemies.length;
-      this.onMessage?.(`Clear. +${this.enemies.length} skill pt.`);
+      const xp = this.enemies.reduce((sum, e) => sum + e.maxHp, 0);
+      const ups = this.state.addXp(xp);
+      this.onMessage?.(`Clear. +${xp} XP.`);
+      if (ups > 0) this.onMessage?.(`LEVEL UP — Lv ${this.state.level}. Allot points at a lighthouse.`);
       this.onVictory?.();
     }
   }

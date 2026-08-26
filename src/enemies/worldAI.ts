@@ -22,6 +22,13 @@ export interface WandererDef {
    * each other's battles — the Afflicted each fight their own private war.
    */
   loner?: boolean;
+  /**
+   * How this thing notices Kat. 'proximity' (default): animals are dumb —
+   * they leave her alone unless she gets right on top of them. 'sight':
+   * it has eyes that still work — it engages anything it can see ahead
+   * of it at range (so you can still slip behind one).
+   */
+  engage?: 'proximity' | 'sight';
 }
 
 export interface NestDef {
@@ -287,13 +294,21 @@ export class WorldAI {
         w.modeTimer = 2.5;
       }
       // Player contact pulls the hunt into a real battle (needs sightline —
-      // no aggro through house walls).
-      if (
-        !playerInBattle &&
-        (w.def.aggro ?? 'hunter') === 'hunter' &&
-        pos.distanceTo(playerPos) < 3.2 &&
-        !lineBlocked(pos.x, pos.z, playerPos.x, playerPos.z, colliders)
-      ) {
+      // no aggro through house walls). Sight-tier enemies also need Kat in
+      // their forward arc; proximity-tier ones just need her too close.
+      const sighted = (w.def.engage ?? 'proximity') === 'sight';
+      let noticed = false;
+      if (!playerInBattle && (w.def.aggro ?? 'hunter') === 'hunter') {
+        const d = pos.distanceTo(playerPos);
+        if (sighted && d < 8) {
+          const facing = new THREE.Vector3(Math.sin(w.enemy.object.rotation.y), 0, Math.cos(w.enemy.object.rotation.y));
+          const toKat = playerPos.clone().sub(pos).setY(0).normalize();
+          noticed = d < 2 || facing.dot(toKat) > 0.1; // point-blank always registers
+        } else if (!sighted && d < 3.2) {
+          noticed = true;
+        }
+      }
+      if (noticed && !lineBlocked(pos.x, pos.z, playerPos.x, playerPos.z, colliders)) {
         const packmates = w.def.loner ? [] : this.wanderers.filter(
           (o) => o !== w && !o.enemy.dead && !o.def.loner && o.def.packId && o.def.packId === w.def.packId &&
             o.enemy.object.position.distanceTo(pos) < 9,

@@ -77,7 +77,9 @@ export class Hud {
     atbRow.style.display = show;
     limitRow.style.display = show;
 
-    this.ammoEl.textContent = `9mm  ${state.ammoInClip}/${state.clipSize}  [${state.reserveAmmo}]`;
+    this.ammoEl.textContent =
+      `9mm  ${state.ammoInClip}/${state.clipSize}  [${state.reserveAmmo}]` +
+      `   Lv ${state.level}  ${state.xp}/${state.xpToNext}`;
 
     if (this.msgTimer > 0) {
       this.msgTimer -= realDt;

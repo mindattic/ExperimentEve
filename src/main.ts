@@ -35,7 +35,7 @@ import { placeModels } from './level/props/modelLoader';
 import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
 import { WorldAI } from './enemies/worldAI';
-import { AFFLICTED_SPECIES } from './enemies/registry';
+import { AFFLICTED_SPECIES, spawnEnemy } from './enemies/registry';
 import { ScareDirector } from './gameplay/scares';
 import { Cats } from './gameplay/cats';
 import { ErasureSquad } from './gameplay/erasureSquad';
@@ -330,7 +330,34 @@ battle.onShot = () => {
   muzzleLight.position.copy(player.position).add(new THREE.Vector3(0, 1.3, 0));
   input.rumble(120, 0.4, 0.8);
   sfx.gunshot();
+  rollCatAllies();
 };
+
+// Petted cats repay the debt: on any player shot, each petted cat that
+// hasn't intervened this battle rolls its chance (1% per petted cat, so a
+// full set of five rolls at 5% each — three cats on one enemy can happen).
+const struckThisBattle = new Set<string>();
+let catsBattleLatch = false;
+function rollCatAllies(): void {
+  const coats = cats.pettedCoats;
+  if (!battle.active || coats.length === 0) return;
+  const chance = coats.length / 100;
+  for (const coat of coats) {
+    if (struckThisBattle.has(coat) || Math.random() >= chance) continue;
+    const foes = battle.enemiesAlive;
+    const target = foes[Math.floor(Math.random() * foes.length)];
+    if (!target) return;
+    struckThisBattle.add(coat);
+    cats.strike(coat, target.object, () => {
+      if (target.dead) return;
+      const dealt = target.takeHit(state.gunDamage * 6, null); // guaranteed crit
+      target.stun(1.8);
+      dmgNumbers.spawn(target.object.position.clone().add(new THREE.Vector3(0, 1.2, 0)), dealt, true);
+      hud.message(`The ${coat} cat strikes — ${dealt}!`);
+      state.addLimit(dealt * 0.3);
+    });
+  }
+}
 
 // City Hall chimes every hour on the hour — gameplay stops to listen, then
 // the message box. Castlevania II: Simon's Quest, quoted directly.
@@ -639,6 +666,54 @@ function handleInteract(i: Interactable): void {
       os.boot(garageMachine);
       break;
     }
+    case 'carDoor': {
+      // The bet resolves once per car: usually "Locked." — otherwise loot
+      // or teeth. Checking is always cheap; opening never is.
+      if (state.flags[`${i.id}:open`]) {
+        hud.message('Nothing else in there.');
+        break;
+      }
+      if (state.flags[`${i.id}:locked`]) {
+        hud.message('Locked.');
+        break;
+      }
+      const roll = Math.random();
+      if (roll < 0.6) {
+        state.flags[`${i.id}:locked`] = true;
+        hud.message('Locked.');
+        sfx.uiBlip();
+      } else if (roll < 0.8) {
+        state.flags[`${i.id}:open`] = true;
+        const lootRoll = Math.random();
+        if (lootRoll < 0.4) {
+          const n = 4 + Math.floor(Math.random() * 5);
+          inventory.add('ammo9', n);
+          hud.message(`The door creaks open. A box of 9mm under the seat — ${n} rounds.`);
+        } else if (lootRoll < 0.6) {
+          inventory.add('medkit', 1);
+          hud.message('The door creaks open. A first-aid kit in the glovebox.');
+        } else if (lootRoll < 0.8) {
+          inventory.add('ring', 1);
+          hud.message('The door creaks open. A ring on the dash. Somebody\'s.');
+        } else {
+          inventory.add('bobbyPin', 2);
+          hud.message('The door creaks open. Bobby pins in the visor. Two.');
+        }
+        sfx.pickup();
+      } else {
+        state.flags[`${i.id}:open`] = true;
+        const pool = ['ratchoir', 'eelneck', 'trashclaw', 'gutterSerpent', 'drainCoil'] as const;
+        const jump = spawnEnemy(pool[Math.floor(Math.random() * pool.length)]!);
+        if (jump) {
+          jump.object.position.set(i.x, 0, i.z);
+          currentEncounter = 'none';
+          battle.start([jump]);
+          subtitles.say('IT WAS IN THE CAR—');
+          input.rumble(300, 0.7, 1);
+        }
+      }
+      break;
+    }
   }
 }
 
@@ -779,7 +854,7 @@ const AFFLICTED_REGIONS: { minX: number; minZ: number; maxX: number; maxZ: numbe
     ['houndfather', 0, -12],
   ];
   spots.forEach(([species, x, z], i) => {
-    worldAI.addWanderer({ species, x, z, region: AFFLICTED_REGIONS[i]!, packId: 'afflicted-street', loner: true });
+    worldAI.addWanderer({ species, x, z, region: AFFLICTED_REGIONS[i]!, packId: 'afflicted-street', loner: true, engage: 'sight' });
   });
 }
 
@@ -802,7 +877,7 @@ function trySpawnAfflicted(): void {
     if (d < 12) continue;
     if (d < 26 && !lineBlocked(x, z, player.position.x, player.position.z, cols)) continue;
     const species = AFFLICTED_SPECIES[Math.floor(Math.random() * AFFLICTED_SPECIES.length)]!;
-    worldAI.addWanderer({ species, x, z, region, packId: 'afflicted-street', loner: true });
+    worldAI.addWanderer({ species, x, z, region, packId: 'afflicted-street', loner: true, engage: 'sight' });
     return;
   }
 }
@@ -1057,7 +1132,9 @@ function frame(): void {
     if (worldAI.countPack('afflicted-street') < afflictedTarget()) trySpawnAfflicted();
   }
   scares.update(gameDt);
-  cats.update(gameDt, player.position);
+  if (battle.active && !catsBattleLatch) struckThisBattle.clear();
+  catsBattleLatch = battle.active;
+  cats.update(gameDt, player.position, state.catsTrust);
   player.update(gameDt, moveDir, sample.magnitude, colliders);
 
   // Bike ram resolution + durability.
@@ -1114,10 +1191,25 @@ function frame(): void {
     }
   }
   const near = !battle.active && !menuOpen && !player.riding ? nearestInteractable() : null;
+  const petCat = !near && !battle.active && !menuOpen && !player.riding
+    ? cats.petCandidate(player.position, state.catsTrust)
+    : null;
   if (near) {
     promptEl.textContent = `${sample.padConnected ? 'X' : 'E'}: ${near.prompt}`;
     promptEl.style.display = 'block';
     if (sample.interactJust && !interactConsumed) handleInteract(near);
+  } else if (petCat) {
+    // Framed like a hazard prompt. It is not a hazard. That's the bit.
+    promptEl.textContent = `${sample.padConnected ? 'X' : 'E'}: Would you like to pet the cat?`;
+    promptEl.style.display = 'block';
+    if (sample.interactJust && !interactConsumed) {
+      cats.pet(petCat);
+      const ups = state.addXp(150);
+      hud.message('You pet the cat. It was not dangerous. +150 XP.');
+      subtitles.say('...You\'re purring. Everything else out here screams.');
+      if (ups > 0) hud.message(`LEVEL UP — Lv ${state.level}. Allot points at a lighthouse.`);
+      sfx.uiConfirm();
+    }
   } else if (executionMark) {
     promptEl.textContent = `${sample.padConnected ? 'A' : 'Enter'}: Execute`;
     promptEl.style.display = 'block';

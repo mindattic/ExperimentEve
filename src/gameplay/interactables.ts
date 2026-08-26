@@ -62,7 +62,7 @@ const LOOT: Record<string, LootRoll[]> = {
 
 export type InteractKind =
   | 'container' | 'salvage' | 'inspect' | 'save' | 'pickup' | 'trade' | 'alarm' | 'chop' | 'bike'
-  | 'ladder' | 'locked';
+  | 'ladder' | 'locked' | 'carDoor';
 
 export type SalvageType = 'car' | 'couch' | 'trashPile' | 'bentBike' | 'semi';
 

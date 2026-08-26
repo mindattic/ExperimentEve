@@ -7,15 +7,21 @@ export type ItemId =
   | 'bandage' | 'molotov' | 'flamethrower'
   // consumables / ammo
   | 'ammo9' | 'medkit'
+  // chimeric DNA injectors (the "magic system" — biology at gunpoint)
+  | 'injCombustion' | 'injCryostasis' | 'injNeuroelectric' | 'injMitosis' | 'injMetabolic'
   // baubles (pawnshop currency)
   | 'pocketWatch' | 'pearlNecklace' | 'ring' | 'silverware'
   // 1998 nostalgia baubles (also pawnable)
   | 'pager' | 'durpy' | 'beanBuddy' | 'pocketPal' | 'vhsSinkingShip' | 'cdHeartGoes'
   | 'blueDress'
+  // gear: armor is just normal clothes. Kat is an ER doctor, not a knight.
+  | 'labCoat' | 'yellowVest' | 'puffyShirt' | 'denimPants'
   // keepsakes: cannot be sold, spent, or lost
   | 'katsCard';
 
-export type ItemCategory = 'component' | 'crafted' | 'consumable' | 'ammo' | 'bauble' | 'keepsake';
+export type ItemCategory = 'component' | 'crafted' | 'consumable' | 'ammo' | 'bauble' | 'gear' | 'keepsake';
+
+export type GearSlot = 'torso' | 'legs';
 
 export interface ItemDef {
   id: ItemId;
@@ -23,6 +29,12 @@ export interface ItemDef {
   category: ItemCategory;
   /** Soulsborne-style flavor: ominous, oblique, lore-bearing. */
   desc: string;
+  /** gear only: where it's worn. */
+  slot?: GearSlot;
+  /** gear only: fraction of incoming damage absorbed. */
+  armor?: number;
+  /** gear only: line Kat says when she puts it on. */
+  equipLine?: string;
 }
 
 export const ITEMS: Record<ItemId, ItemDef> = {
@@ -78,6 +90,26 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'medkit', name: 'First-Aid Kit', category: 'consumable',
     desc: 'Erasure issue. The seal is civilian-proof. The contents were never meant for civilians.',
   },
+  injCombustion: {
+    id: 'injCombustion', name: 'Injector: COMBUSTION', category: 'consumable',
+    desc: 'Chimeric DNA in a field syringe. The label warns of "spontaneous oxidation events." Someone underlined "events."',
+  },
+  injCryostasis: {
+    id: 'injCryostasis', name: 'Injector: CRYOSTASIS', category: 'consumable',
+    desc: 'The serum is cold. It has always been cold. It will make other things cold.',
+  },
+  injNeuroelectric: {
+    id: 'injNeuroelectric', name: 'Injector: NEUROELECTRIC', category: 'consumable',
+    desc: 'Labeled in grease pencil, recently. Somebody who watches wanted her to have this.',
+  },
+  injMitosis: {
+    id: 'injMitosis', name: 'Injector: MITOSIS', category: 'consumable',
+    desc: 'Growth, bottled. The payroll box it was locked in suggests it was worth more than the payroll.',
+  },
+  injMetabolic: {
+    id: 'injMetabolic', name: 'Injector: METABOLIC BURN', category: 'consumable',
+    desc: 'The pawnbroker had one. He would not say where from. He would not say why he kept the fridge running.',
+  },
   pocketWatch: {
     id: 'pocketWatch', name: 'Pocket Watch', category: 'bauble',
     desc: 'Stopped at 6:47. They all stopped at 6:47.',
@@ -122,6 +154,26 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'blueDress', name: 'The Blue Dress', category: 'bauble',
     desc: 'Navy blue. Dry-clean only. It has been through something historic. The pawnbroker pays double and asks nothing.',
   },
+  labCoat: {
+    id: 'labCoat', name: 'Lab Coat', category: 'gear', slot: 'torso', armor: 0.05,
+    desc: 'KATHERINE WEISS, M.D. — EMERGENCY MEDICINE. She left in it. The pockets still work; that\'s most of medicine.',
+    equipLine: 'Dr. Weiss, rounding. God help the patients.',
+  },
+  yellowVest: {
+    id: 'yellowVest', name: 'Yellow Vest', category: 'gear', slot: 'torso', armor: 0.08,
+    desc: 'Road-crew hi-vis. The night can see her coming from anywhere. Nothing out here needed the help.',
+    equipLine: 'Safety first.',
+  },
+  puffyShirt: {
+    id: 'puffyShirt', name: 'Puffy Shirt', category: 'gear', slot: 'torso', armor: 0.12,
+    desc: 'Enormous billowing sleeves. Whoever owned it was on TV once, briefly, against their will.',
+    equipLine: 'But I don\'t want to be a pirate!',
+  },
+  denimPants: {
+    id: 'denimPants', name: 'Denim Pants', category: 'gear', slot: 'legs', armor: 0.08,
+    desc: 'Stonewashed, bootcut, indestructible. The 90s built two things to last and this is both of them.',
+    equipLine: 'These are somebody\'s good jeans.',
+  },
   katsCard: {
     id: 'katsCard', name: 'Father\'s Day Card (unsigned)', category: 'keepsake',
     desc: 'She\'s carried it for three weeks. It isn\'t sealed. She hasn\'t signed it. Not for sale.',
@@ -162,6 +214,11 @@ export const RECIPES: Recipe[] = [
     output: 'bobbyPin',
     line: 'A little wire, a little bend. Two pins, actually.',
     bonusCount: 1, // scrap yields 2 pins
+  },
+  {
+    inputs: ['medkit', 'alcohol', 'scrap'],
+    output: 'injCryostasis',
+    line: 'Coolant chemistry, a clean needle, a steady hand. Cryostasis, home brew.',
   },
 ];
 

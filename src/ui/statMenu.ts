@@ -8,6 +8,8 @@ const STAT_ROWS: { key: keyof SkillPoints; label: string; desc: string }[] = [
   { key: 'reload', label: 'RELOAD', desc: '-7% reload time' },
 ];
 
+const RAPID_FIRE_COST = 3;
+
 // Lighthouse-lamp menu: allocate skill points, then Save & Rest.
 export class StatMenu {
   open = false;
@@ -32,7 +34,7 @@ export class StatMenu {
 
   update(input: InputSample, state: GameState): void {
     if (!this.open) return;
-    const rows = STAT_ROWS.length + 2; // + Save&Rest + Close
+    const rows = STAT_ROWS.length + 3; // + Rapid Fire + Save&Rest + Close
     if (input.navUpJust) this.index = (this.index + rows - 1) % rows;
     if (input.navDownJust) this.index = (this.index + 1) % rows;
     if (input.dodgeJust) {
@@ -47,6 +49,11 @@ export class StatMenu {
           state.recomputeDerived();
         }
       } else if (this.index === STAT_ROWS.length) {
+        if (!state.abilities.rapidFire && state.unspentPoints >= RAPID_FIRE_COST) {
+          state.abilities.rapidFire = true;
+          state.unspentPoints -= RAPID_FIRE_COST;
+        }
+      } else if (this.index === STAT_ROWS.length + 1) {
         this.onSave?.();
         this.toggle();
         return;
@@ -60,7 +67,9 @@ export class StatMenu {
 
   private render(state: GameState): void {
     const lines = [
-      `<div style="color:#8fb0c0;margin-bottom:6px">THE LAMP — unspent points: ${state.unspentPoints}</div>`,
+      `<div style="color:#8fb0c0;margin-bottom:6px">THE LAMP — Lv ${state.level}` +
+      `  <span style="color:#6a7a84;font-size:12px">${state.xp}/${state.xpToNext} XP</span>` +
+      `  — unspent points: ${state.unspentPoints}</div>`,
     ];
     STAT_ROWS.forEach((row, i) => {
       const sel = i === this.index;
@@ -69,8 +78,15 @@ export class StatMenu {
         `${row.label} ${state.skills[row.key]}  <span style="color:#6a7a84;font-size:12px">${row.desc}</span></div>`,
       );
     });
-    const selS = this.index === STAT_ROWS.length;
-    const selX = this.index === STAT_ROWS.length + 1;
+    const selR = this.index === STAT_ROWS.length;
+    const rfLabel = state.abilities.rapidFire
+      ? `RAPID FIRE <span style="color:#9fb8a0">unlocked</span>`
+      : `RAPID FIRE <span style="color:#6a7a84;font-size:12px">unlock (${RAPID_FIRE_COST} pts) — dump the clip, spray wide, hit hard</span>`;
+    lines.push(
+      `<div style="margin-top:4px;color:${selR ? '#ffe28a' : '#cfa8d8'}">${selR ? '&#9656; ' : '&nbsp;&nbsp;'}${rfLabel}</div>`,
+    );
+    const selS = this.index === STAT_ROWS.length + 1;
+    const selX = this.index === STAT_ROWS.length + 2;
     lines.push(
       `<div style="margin-top:6px;color:${selS ? '#ffe28a' : '#9fb8a0'}">${selS ? '&#9656; ' : '&nbsp;&nbsp;'}Save & Rest</div>`,
       `<div style="color:${selX ? '#ffe28a' : '#8a9298'}">${selX ? '&#9656; ' : '&nbsp;&nbsp;'}Step away</div>`,

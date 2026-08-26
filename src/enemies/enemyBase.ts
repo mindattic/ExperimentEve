@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Collider } from '../physics/colliders';
+import { makePS1Material } from '../render/ps1/ps1Material';
 
 export interface EnemyPart {
   tag: string;
@@ -38,6 +39,34 @@ export abstract class Enemy {
   private hurtFlash = 0;
   private flashables: THREE.MeshLambertMaterial[] = [];
 
+  // ---- stun: sustained rapid damage (or a crit) staggers anything --------
+  private stunTimer = 0;
+  private recentDamage = 0;
+
+  get stunned(): boolean {
+    return this.stunTimer > 0;
+  }
+
+  stun(seconds: number): void {
+    this.stunTimer = Math.max(this.stunTimer, seconds);
+  }
+
+  /**
+   * Tick stun bookkeeping (battle calls this before updateBattle and skips
+   * the FSM while it returns true). Recent-damage memory bleeds off fast.
+   */
+  tickStun(gameDt: number): boolean {
+    this.recentDamage = Math.max(0, this.recentDamage - gameDt * 14);
+    if (this.stunTimer > 0) {
+      this.stunTimer -= gameDt;
+      // Dazed judder.
+      this.object.rotation.y += Math.sin(this.stunTimer * 26) * 0.05;
+      if (this.stunTimer <= 0) this.recentDamage = 0;
+      return true;
+    }
+    return false;
+  }
+
   /** Collect materials that should flash on hit. Call after building meshes. */
   protected registerFlashMaterials(): void {
     this.flashables = [];
@@ -53,11 +82,36 @@ export abstract class Enemy {
     const dealt = part?.flatDamageOverride ?? amount * (part?.damageMultiplier ?? 1);
     this.hp = Math.max(0, this.hp - dealt);
     this.hurtFlash = 0.18;
+    // Rapid damage staggers: soak enough in a short window and stun.
+    this.recentDamage += dealt;
+    if (!this.stunned && this.recentDamage >= Math.max(30, this.maxHp * 0.35)) {
+      this.stun(2.2);
+    }
     if (this.hp <= 0 && !this.dead) {
       this.dead = true;
       this.onDeath();
     }
     return dealt;
+  }
+
+  /**
+   * MITOSIS: force a tumorous wound to bloom — a new weak-point part.
+   * Bursting it rides the normal weak-point rules: crit floater + stagger.
+   */
+  growTumor(): void {
+    const node = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 5, 4),
+      makePS1Material({ color: 0xc06a7a }),
+    );
+    node.position.set(
+      (Math.random() - 0.5) * 0.5,
+      0.5 + Math.random() * 0.7,
+      (Math.random() - 0.5) * 0.5,
+    );
+    node.scale.set(1, 0.8, 1.1);
+    this.object.add(node);
+    this.parts.push({ tag: 'tumor', node, radius: 0.22, damageMultiplier: 4, weakPoint: true, active: true });
+    this.registerFlashMaterials();
   }
 
   protected onDeath(): void {

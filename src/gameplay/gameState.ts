@@ -1,3 +1,6 @@
+import type { InfusionId } from './infusions';
+import { ITEMS, type GearSlot, type ItemId } from './inventory';
+
 export interface SkillPoints {
   health: number;
   speed: number;
@@ -10,6 +13,58 @@ export interface SkillPoints {
 export class GameState {
   skills: SkillPoints = { health: 0, speed: 0, damage: 0, reload: 0 };
   unspentPoints = 0;
+
+  /** Unlockable abilities, bought with skill points at a lighthouse. */
+  abilities = { rapidFire: false };
+
+  /** Chimeric DNA infusions unlocked by injectors — biology, not magic. */
+  infusions: Record<InfusionId, boolean> = {
+    combustion: false, cryostasis: false, neuroelectric: false, mitosis: false, metabolicBurn: false,
+  };
+
+  /** Metabolic Burn: seconds of redlined metabolism remaining. */
+  hasteTimer = 0;
+
+  /** Worn clothes. Armor in Kingsport is denim and borrowed shirts. */
+  equipped: Partial<Record<GearSlot, ItemId>> = {};
+
+  /** Total incoming-damage reduction from worn gear (capped — it's cloth). */
+  get armorFraction(): number {
+    let a = 0;
+    for (const id of Object.values(this.equipped)) {
+      if (id) a += ITEMS[id].armor ?? 0;
+    }
+    return Math.min(0.3, a);
+  }
+
+  level = 1;
+  xp = 0;
+
+  /** XP needed to clear the current level. */
+  get xpToNext(): number {
+    return 100 * this.level;
+  }
+
+  /**
+   * Grant XP; levels resolve immediately (points spend at a lighthouse).
+   * Returns how many levels were gained.
+   */
+  addXp(amount: number): number {
+    this.xp += amount;
+    let ups = 0;
+    while (this.xp >= this.xpToNext) {
+      this.xp -= this.xpToNext;
+      this.level++;
+      this.unspentPoints += 2;
+      ups++;
+    }
+    return ups;
+  }
+
+  /** The cats can tell. Strength reads as safety. */
+  get catsTrust(): boolean {
+    return this.level >= 3;
+  }
 
   maxHp = 80;
   hp = 80;
@@ -35,7 +90,7 @@ export class GameState {
   }
 
   get atbRatePerSec(): number {
-    return 0.16 * (1 + this.skills.speed * 0.06);
+    return 0.16 * (1 + this.skills.speed * 0.06) * (this.hasteTimer > 0 ? 1.7 : 1);
   }
 
   get moveSpeed(): number {
@@ -63,11 +118,18 @@ export class GameState {
   }
 
   regen(gameDt: number): void {
-    this.pe = Math.min(this.maxPe, this.pe + this.peRegenPerSec * gameDt);
+    this.pe = Math.min(this.maxPe, this.pe + (this.peRegenPerSec + this.peRegenBonus) * gameDt);
+    this.hasteTimer = Math.max(0, this.hasteTimer - gameDt);
   }
 
   damagePlayer(amount: number): void {
-    this.hp = Math.max(0, this.hp - amount);
-    this.addLimit(amount * 0.8);
+    const taken = amount * (1 - this.armorFraction);
+    this.hp = Math.max(0, this.hp - taken);
+    this.addLimit(taken * 0.8);
+  }
+
+  /** Lab-coat pockets: a working doctor regenerates PE faster. */
+  get peRegenBonus(): number {
+    return this.equipped.torso === 'labCoat' ? 1.5 : 0;
   }
 }
