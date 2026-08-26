@@ -17,6 +17,11 @@ export interface WandererDef {
   packId?: string;
   /** hunters pull the player into battle; skittish ones bolt instead. */
   aggro?: 'hunter' | 'skittish';
+  /**
+   * Loners share a packId for bookkeeping (density counts) but never join
+   * each other's battles — the Afflicted each fight their own private war.
+   */
+  loner?: boolean;
 }
 
 export interface NestDef {
@@ -289,8 +294,8 @@ export class WorldAI {
         pos.distanceTo(playerPos) < 3.2 &&
         !lineBlocked(pos.x, pos.z, playerPos.x, playerPos.z, colliders)
       ) {
-        const packmates = this.wanderers.filter(
-          (o) => o !== w && !o.enemy.dead && o.def.packId && o.def.packId === w.def.packId &&
+        const packmates = w.def.loner ? [] : this.wanderers.filter(
+          (o) => o !== w && !o.enemy.dead && !o.def.loner && o.def.packId && o.def.packId === w.def.packId &&
             o.enemy.object.position.distanceTo(pos) < 9,
         );
         const group = [w, ...packmates];

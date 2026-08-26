@@ -23,6 +23,7 @@ import { TitleScreen } from './ui/titleScreen';
 import { ApertureOS } from './ui/apertureOS';
 import { lineBlocked, type Collider } from './physics/colliders';
 import { Hud } from './ui/hud';
+import { DamageNumbers } from './ui/damageNumbers';
 import { Subtitles } from './ui/subtitles';
 import { InventoryMenu } from './ui/inventoryMenu';
 import { loadLevel, triggerContains } from './level/levelLoader';
@@ -300,6 +301,8 @@ const garageMachine = {
 };
 const battle = new BattleSystem(state, scene, hudEl, canvas);
 battle.onMessage = (t) => hud.message(t);
+const dmgNumbers = new DamageNumbers(hudEl);
+battle.onDamage = (pos, amount, crit) => dmgNumbers.spawn(pos, amount, crit);
 battle.hasAxe = () => inventory.count('fireAxe') > 0;
 battle.inv = inventory;
 pawnMenu.onMessage = (t) => hud.message(t);
@@ -776,7 +779,7 @@ const AFFLICTED_REGIONS: { minX: number; minZ: number; maxX: number; maxZ: numbe
     ['houndfather', 0, -12],
   ];
   spots.forEach(([species, x, z], i) => {
-    worldAI.addWanderer({ species, x, z, region: AFFLICTED_REGIONS[i]!, packId: 'afflicted-street' });
+    worldAI.addWanderer({ species, x, z, region: AFFLICTED_REGIONS[i]!, packId: 'afflicted-street', loner: true });
   });
 }
 
@@ -799,7 +802,7 @@ function trySpawnAfflicted(): void {
     if (d < 12) continue;
     if (d < 26 && !lineBlocked(x, z, player.position.x, player.position.z, cols)) continue;
     const species = AFFLICTED_SPECIES[Math.floor(Math.random() * AFFLICTED_SPECIES.length)]!;
-    worldAI.addWanderer({ species, x, z, region, packId: 'afflicted-street' });
+    worldAI.addWanderer({ species, x, z, region, packId: 'afflicted-street', loner: true });
     return;
   }
 }
@@ -1122,6 +1125,7 @@ function frame(): void {
     promptEl.style.display = 'none';
   }
 
+  dmgNumbers.update(realDt, cameraMgr.camera);
   // Ambience animation.
   worldClock.tick(realDt); // the night does not pause for menus
   applyTimeOfDay();

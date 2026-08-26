@@ -40,6 +40,8 @@ export class BattleSystem {
   private lockedX = 0.5;
   private victoryTimer = 0;
   onMessage: ((text: string) => void) | null = null;
+  /** Damage floater hook: world position of the wound, amount, crit flag. */
+  onDamage: ((worldPos: THREE.Vector3, amount: number, crit: boolean) => void) | null = null;
   onShot: (() => void) | null = null;
   onVictory: (() => void) | null = null;
   onDefeat: (() => void) | null = null;
@@ -269,6 +271,7 @@ export class BattleSystem {
                   for (const e of this.enemiesAlive) {
                     if (e.object.position.distanceTo(center.object.position) < 3) {
                       const dealt = e.takeHit(35, null);
+                      this.onDamage?.(e.object.position.clone().add(new THREE.Vector3(0, 1.2, 0)), dealt, false);
                       this.state.addLimit(dealt * 0.3);
                       hits++;
                       if (e.dead) this.onMessage?.(`${e.displayName} burns down.`);
@@ -293,6 +296,7 @@ export class BattleSystem {
                 for (const e of this.enemiesAlive) {
                   if (e.object.position.distanceTo(this.lastPlayerPos) < 4.2) {
                     const dealt = e.takeHit(22, null);
+                    this.onDamage?.(e.object.position.clone().add(new THREE.Vector3(0, 1.2, 0)), dealt, false);
                     this.state.addLimit(dealt * 0.3);
                     hits++;
                     if (e.dead) this.onMessage?.(`${e.displayName} is painted over. Permanently.`);
@@ -314,6 +318,7 @@ export class BattleSystem {
                 const target = this.nearestEnemy();
                 if (target) {
                   const dealt = target.takeHit(25, null);
+                  this.onDamage?.(target.object.position.clone().add(new THREE.Vector3(0, 1.2, 0)), dealt, false);
                   this.onMessage?.(`The axe lands — ${dealt}.`);
                   this.state.addLimit(dealt * 0.5);
                   if (target.dead) this.onMessage?.(`${target.displayName} is destroyed.`);
@@ -550,12 +555,15 @@ export class BattleSystem {
       return;
     }
     let dealt: number;
+    const wound = t.part.node.getWorldPosition(new THREE.Vector3());
     if (this.pendingCrit === 'weak') {
       dealt = t.enemy.takeHit(s.gunDamage * 6, null); // crit ignores overrides
       this.onMessage?.(`CRITICAL — ${dealt} damage!`);
+      this.onDamage?.(wound, dealt, true);
     } else if (this.pendingCrit === 'body') {
       dealt = t.enemy.takeHit(s.gunDamage * 2, null);
       this.onMessage?.(`Precision hit — ${dealt} damage.`);
+      this.onDamage?.(wound, dealt, false);
     } else {
       dealt = t.enemy.takeHit(s.gunDamage, t.part);
       this.onMessage?.(
@@ -563,6 +571,8 @@ export class BattleSystem {
           ? `It barely notices. (${dealt})`
           : `${t.part.tag} hit — ${dealt} damage.`,
       );
+      // Weak-point anatomy is this game's crit.
+      this.onDamage?.(wound, dealt, t.part.weakPoint || t.part.damageMultiplier > 1);
     }
     s.addLimit(dealt * 0.6);
     if (t.enemy.dead) this.onMessage?.(`${t.enemy.displayName} is destroyed.`);
