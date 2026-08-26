@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Experiment Eve</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      #app {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      canvas {
+        image-rendering: pixelated;
+        display: block;
+      }
+      #hud {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        font-family: 'Courier New', Courier, monospace;
+        color: #ddd;
+        text-shadow: 1px 1px 0 #000;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="hud"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,1 +1,3 @@
-﻿.claude/quicksave.md
+node_modules/
+dist/
+.claude/quicksave.md
