@@ -404,6 +404,17 @@ battle.onShot = (wound) => {
     gravity: 0,
   });
   if (wound) particles.tracer(muzzle, wound);
+  // Powder smoke hangs a moment after the flash.
+  particles.burst(muzzle, {
+    count: 4,
+    color: 0x8a8a96,
+    colorEnd: 0x33333d,
+    speed: 0.5,
+    spread: 0.6,
+    life: 0.6,
+    size: 0.09,
+    gravity: -0.8,
+  });
   // Brass: one casing arcs off her right shoulder and drops.
   particles.burst(muzzle, {
     count: 1,
@@ -1358,11 +1369,17 @@ function frame(): void {
     if (g.mesh && g.mesh.visible && state.flags[g.flag]) g.mesh.visible = false;
   }
 
-  rig.pose = battle.phase === 'fire' ? 'aim' : 'explore';
+  // Gun comes up the moment the tactical pause opens and stays up through
+  // aiming and the shot — she's committed, and the pose says so.
+  rig.pose = battle.wantsPause || battle.phase === 'fire' ? 'aim' : 'explore';
   // Below ~a third health she visibly carries the damage.
   rig.hurtK = Math.max(0, 1 - state.hp / (state.maxHp * 0.35));
   const moving = moveDir !== null && !player.locked;
-  rig.update(gameDt, moving && !player.riding ? sample.magnitude : 0, player.dodgeProgress);
+  // The rig runs on realDt during the battle pause (so the gun-raise still
+  // animates while the world is frozen) and gameDt otherwise (so hit-stop
+  // bites the animation too).
+  const rigDt = battle.wantsPause ? realDt : gameDt;
+  rig.update(rigDt, moving && !player.riding ? sample.magnitude : 0, player.dodgeProgress);
 
   // Footsteps on foot-plants (walk phase crosses multiples of pi).
   if (moving) {

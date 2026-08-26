@@ -530,6 +530,7 @@ export class BattleSystem {
                 if (target) {
                   const dealt = target.takeHit(25, null);
                   this.onDamage?.(target.object.position.clone().add(new THREE.Vector3(0, 1.2, 0)), dealt, false);
+                  this.knock(target, 0.45); // an axe MOVES things
                   this.onMessage?.(`The axe lands — ${dealt}.`);
                   this.state.addLimit(dealt * 0.5);
                   if (target.dead) this.onMessage?.(`${target.displayName} is destroyed.`);
@@ -550,6 +551,17 @@ export class BattleSystem {
         },
       },
     ];
+  }
+
+  /** Impact knockback: shove the enemy away from Kat along the shot line. */
+  private knock(e: Enemy, dist: number): void {
+    if (e.dead) return;
+    const dx = e.object.position.x - this.lastPlayerPos.x;
+    const dz = e.object.position.z - this.lastPlayerPos.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 1e-3) return;
+    e.object.position.x += (dx / d) * dist;
+    e.object.position.z += (dz / d) * dist;
   }
 
   private nearestEnemy(): Enemy | null {
@@ -782,6 +794,7 @@ export class BattleSystem {
       dealt = t.enemy.takeHit(s.gunDamage * 6, null); // crit ignores overrides
       this.onMessage?.(`CRITICAL — ${dealt} damage!`);
       this.onDamage?.(wound, dealt, true);
+      this.knock(t.enemy, 0.35);
       if (!t.enemy.dead) {
         t.enemy.stun(1.8);
         this.onMessage?.(`${t.enemy.displayName} reels.`);
@@ -790,8 +803,10 @@ export class BattleSystem {
       dealt = t.enemy.takeHit(s.gunDamage * 2, null);
       this.onMessage?.(`Precision hit — ${dealt} damage.`);
       this.onDamage?.(wound, dealt, false);
+      this.knock(t.enemy, 0.2);
     } else {
       dealt = t.enemy.takeHit(s.gunDamage, t.part);
+      this.knock(t.enemy, t.part.weakPoint || t.part.damageMultiplier > 1 ? 0.3 : 0.12);
       this.onMessage?.(
         t.part.flatDamageOverride !== undefined
           ? `It barely notices. (${dealt})`
@@ -839,6 +854,7 @@ export class BattleSystem {
       }
       const dealt = t.enemy.takeHit(dmg, t.part);
       this.onDamage?.(wound, dealt, burst);
+      this.knock(t.enemy, burst ? 0.15 : 0.05);
       total += dealt;
       hits++;
       if (t.enemy.dead) break;
