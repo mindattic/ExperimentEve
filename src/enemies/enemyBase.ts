@@ -36,13 +36,19 @@ export abstract class Enemy {
   parts: EnemyPart[] = [];
   radius = 0.5;
 
-  private hurtFlash = 0;
+  protected hurtFlash = 0;
   private flashables: THREE.MeshLambertMaterial[] = [];
 
   // ---- learned weaknesses: weak points glow only once she's drawn blood --
   weaknessRevealed = false;
   private weakGlowT = Math.random() * 10;
   private weakGlowMats: THREE.MeshLambertMaterial[] = [];
+  protected addRecentDamage(amount: number): void {
+    this.recentDamage += amount;
+    if (!this.stunned && this.recentDamage >= Math.max(30, this.maxHp * 0.35)) {
+      this.stun(2.2);
+    }
+  }
 
   /**
    * First hit teaches: from then on every weak-point part pulses hot so the
@@ -101,14 +107,11 @@ export abstract class Enemy {
   }
 
   takeHit(amount: number, part: EnemyPart | null): number {
-    const dealt = part?.flatDamageOverride ?? amount * (part?.damageMultiplier ?? 1);
+    const dealt = Math.round(part?.flatDamageOverride ?? amount * (part?.damageMultiplier ?? 1));
     this.hp = Math.max(0, this.hp - dealt);
     this.hurtFlash = 0.18;
     // Rapid damage staggers: soak enough in a short window and stun.
-    this.recentDamage += dealt;
-    if (!this.stunned && this.recentDamage >= Math.max(30, this.maxHp * 0.35)) {
-      this.stun(2.2);
-    }
+    this.addRecentDamage(dealt);
     if (this.hp <= 0 && !this.dead) {
       this.dead = true;
       this.onDeath();

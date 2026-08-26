@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Enemy, EnemyPart } from '../enemies/enemyBase';
+import { GraftedChimera } from '../enemies/grafted';
 import type { GameState } from '../gameplay/gameState';
 import type { Inventory } from '../gameplay/inventory';
 import { INFUSIONS } from '../gameplay/infusions';
@@ -41,6 +42,8 @@ export class BattleSystem {
   private atbWasFull = false;
   /** ATB gauge just filled — main plays the ready chirp. */
   onAtbReady: (() => void) | null = null;
+  /** A Grafted's segment tore off at this position — main throws the gore. */
+  onSever: ((pos: THREE.Vector3) => void) | null = null;
   private pendingCrit: 'none' | 'weak' | 'body' | 'miss' = 'none';
   private sweepT = 0;
   private lockedY = 0.5;
@@ -187,7 +190,18 @@ export class BattleSystem {
     if (this.phase === 'inactive') return;
     this.lastPlayerPos.copy(player.position);
 
-    for (const e of this.enemies) e.updateAlways(realDt);
+    for (const e of this.enemies) {
+      e.updateAlways(realDt);
+      if (e instanceof GraftedChimera) {
+        for (const sev of e.drainSevered()) {
+          this.onMessage?.(`${sev.label} tears away!`);
+          this.onSever?.(sev.pos);
+          if (e.aliveSegments === 0 && !e.dead) {
+            this.onMessage?.(`${e.displayName} is stripped bare — the core is exposed!`);
+          }
+        }
+      }
+    }
 
     // ATB-full chirp (once per fill).
     if (this.atb >= 1 && !this.atbWasFull) {

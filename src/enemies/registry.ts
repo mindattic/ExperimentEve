@@ -39,6 +39,7 @@ import { Jellyuncle } from './afflicted/jellyuncle';
 import { Woodpeckerclerk } from './afflicted/woodpeckerclerk';
 import { Tortoisenana } from './afflicted/tortoisenana';
 import { Carpsire } from './afflicted/carpsire';
+import { GraftedChimera, GRAFTED_TYPES, GRAFTED_BY_ID } from './grafted';
 
 // String-keyed species registry: level data and the A-Life sim spawn by id,
 // and expansion districts can register new species without touching core.
@@ -86,6 +87,18 @@ export const ENEMY_REGISTRY: Record<string, () => Enemy> = {
   woodpeckerclerk: () => new Woodpeckerclerk(),
   tortoisenana: () => new Tortoisenana(),
   carpsire: () => new Carpsire(),
+};
+
+// THE GRAFTED — segmented minibosses that graduate into street heavies.
+for (const t of GRAFTED_TYPES) {
+  ENEMY_REGISTRY[t.id] = () => new GraftedChimera(GRAFTED_BY_ID[t.id]!);
+}
+
+/** Grafted ids by story tier, for the boss-debut schedule + heavy pool. */
+export const GRAFTED_TIERS: Record<1 | 2 | 3, string[]> = {
+  1: GRAFTED_TYPES.filter((t) => t.tier === 1).map((t) => t.id),
+  2: GRAFTED_TYPES.filter((t) => t.tier === 2).map((t) => t.id),
+  3: GRAFTED_TYPES.filter((t) => t.tier === 3).map((t) => t.id),
 };
 
 /** The zombie-tier species ids, for random street spawns. */

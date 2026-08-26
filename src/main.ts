@@ -36,7 +36,7 @@ import { Particles } from './render/particles';
 import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
 import { WorldAI } from './enemies/worldAI';
-import { AFFLICTED_SPECIES, spawnEnemy } from './enemies/registry';
+import { AFFLICTED_SPECIES, GRAFTED_TIERS, spawnEnemy } from './enemies/registry';
 import { ScareDirector } from './gameplay/scares';
 import { Cats } from './gameplay/cats';
 import { ErasureSquad } from './gameplay/erasureSquad';
@@ -319,6 +319,14 @@ const garageMachine = {
 const battle = new BattleSystem(state, scene, hudEl, canvas);
 battle.onMessage = (t) => hud.message(t);
 battle.onAtbReady = () => sfx.atbReady();
+battle.onSever = (pos) => {
+  hitStop = 0.14;
+  sfx.chop();
+  particles.burst(pos, {
+    count: 22, color: 0xb84a3a, colorEnd: 0x30100c,
+    speed: 4, life: 0.55, size: 0.1, gravity: 7,
+  });
+};
 const dmgNumbers = new DamageNumbers(hudEl);
 battle.onDamage = (pos, amount, crit) => {
   dmgNumbers.spawn(pos, amount, crit);
@@ -926,7 +934,19 @@ function trySpawnAfflicted(): void {
     const d = Math.hypot(x - player.position.x, z - player.position.z);
     if (d < 12) continue;
     if (d < 26 && !lineBlocked(x, z, player.position.x, player.position.z, cols)) continue;
-    const species = AFFLICTED_SPECIES[Math.floor(Math.random() * AFFLICTED_SPECIES.length)]!;
+    // Past midnight, debuted Grafted tiers walk the streets as heavies.
+    const pastMidnight = worldClock.minutesOfDay - 24 * 60;
+    const heavyChance = pastMidnight > 0 && graftedTierUnlocked > 0
+      ? Math.min(0.35, 0.15 + (pastMidnight / 60) * 0.08)
+      : 0;
+    let species: string;
+    if (Math.random() < heavyChance) {
+      const pool: string[] = [];
+      for (let tier = 1 as 1 | 2 | 3; tier <= graftedTierUnlocked; tier++) pool.push(...GRAFTED_TIERS[tier as 1 | 2 | 3]);
+      species = pool[Math.floor(Math.random() * pool.length)]!;
+    } else {
+      species = AFFLICTED_SPECIES[Math.floor(Math.random() * AFFLICTED_SPECIES.length)]!;
+    }
     worldAI.addWanderer({ species, x, z, region, packId: 'afflicted-street', loner: true, engage: 'sight' });
     return;
   }
@@ -1012,6 +1032,16 @@ const train = new THREE.Group();
   scene.add(train);
 }
 
+// The Grafted arrive as scheduled minibosses; once a tier has debuted (and
+// midnight has passed) they join the street pool as heavies — tonight's
+// boss is 3 AM's trash mob. The power fantasy runs on the clock too.
+let graftedTierUnlocked = 0;
+function debutGrafted(tier: 1 | 2 | 3, x: number, z: number, region: { minX: number; minZ: number; maxX: number; maxZ: number }): void {
+  const pool = GRAFTED_TIERS[tier];
+  const species = pool[Math.floor(Math.random() * pool.length)]!;
+  worldAI.addWanderer({ species, x, z, region, packId: 'grafted-boss', loner: true, engage: 'sight' });
+}
+
 // ---- The story clock ---------------------------------------------------
 // The night runs on a schedule whether or not she's watching. Keep
 // exploring and you WILL run into the next beat — story arrives by hour,
@@ -1031,6 +1061,30 @@ const timedEvents: { at: number; run: () => void; fired?: boolean }[] = [
       train.visible = true;
       train.position.x = -46;
       subtitles.say('The 11 o\'clock freight. It doesn\'t slow for Kingsport anymore.', 4);
+    },
+  },
+  {
+    at: 21 * 60 + 30, // 9:30 PM — the first Grafted walks
+    run: () => {
+      graftedTierUnlocked = Math.max(graftedTierUnlocked, 1);
+      debutGrafted(1, 0, 3, { minX: -13, minZ: 0.5, maxX: 13, maxZ: 5.5 });
+      subtitles.say('Something stitched is dragging itself up the cross street. Several of it.', 4.5);
+    },
+  },
+  {
+    at: 22 * 60 + 30, // 10:30 PM — the second
+    run: () => {
+      graftedTierUnlocked = Math.max(graftedTierUnlocked, 2);
+      debutGrafted(2, 0, 25, { minX: -3.5, minZ: 21, maxX: 3.5, maxZ: 29 });
+      subtitles.say('More surgery on the north street. Bigger thread.', 4);
+    },
+  },
+  {
+    at: 23 * 60 + 30, // 11:30 PM — the third
+    run: () => {
+      graftedTierUnlocked = Math.max(graftedTierUnlocked, 3);
+      debutGrafted(3, 0, -9, { minX: -3.5, minZ: -16, maxX: 3.5, maxZ: -2 });
+      subtitles.say('The south street has a new landlord. It came assembled.', 4);
     },
   },
   {
