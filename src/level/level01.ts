@@ -10,10 +10,21 @@ import type { LevelDef } from './levelTypes';
 // -> chain-link corridor east (x 6..26) -> north (z -18..-6) -> garage.
 
 export const LEVEL01: LevelDef = {
-  playerStart: [0, 36],
-  playerFacing: Math.PI, // facing -Z (south, toward town)
+  playerStart: [-3, 38.4], // washed up on the shore gravel, by the wreck
+  playerFacing: 0, // facing +Z — the water, and what's left of the boat
 
   zones: [
+    {
+      // The shore where she washes up: low shot across her toward the
+      // wreck and the water. Listed before 'tracks' (whose polygon
+      // contains this one) so it wins the spawn acquisition.
+      id: 'shore',
+      polygon: [[-8, 36.8], [2, 36.8], [2, 40], [-8, 40]],
+      cameraPosition: [1.8, 2.0, 35.0],
+      cameraLookAt: [-3.4, 0.7, 41.5],
+      forward: [0, 1],
+      fov: 58,
+    },
     {
       id: 'tracks',
       polygon: [[-14, 30], [14, 30], [14, 40], [-14, 40]],
@@ -246,6 +257,10 @@ export const LEVEL01: LevelDef = {
     { min: [-2.6, -15.2], max: [-0.6, -13.4], h: 1.15, hidden: true }, // dead wagon, south street
     { min: [-6.6, 17.1], max: [-4.9, 17.9], h: 0.75, color: 0x6a4a52 }, // curb couch
 
+    // Shore granite inside the walkable strip (the rest is set dressing
+    // beyond the z=40 boundary wall).
+    { min: [-5.6, 39.3], max: [-4.5, 40], h: 0.5, hidden: true },
+
     // A bicycle leaning on the east fence of street A.
     { min: [3.4, 23.6], max: [3.8, 24.6], h: 0.9, color: 0x8a4420, noCollide: true },
     // Payphone by the pawnshop (the Observer's other channel).
@@ -362,6 +377,14 @@ export const LEVEL01: LevelDef = {
       id: 'islandView', x: -12.5, z: 36, prompt: 'Look across the water', kind: 'inspect', once: false,
       inspectText: 'The island is lit up like a shift change. Boats run out every few minutes. They come back empty.',
     },
+    {
+      id: 'wreck1', x: -3.4, z: 39.6, radius: 1.2, prompt: 'Look at the rowboat', kind: 'inspect', once: false,
+      inspectText: 'Half a rented rowboat, folded over the granite. The bay kept the other half and the deposit. One-way trip, then.',
+    },
+    // The seagull on the stern. It is a normal seagull. The prompt is a
+    // test of character, and the game grades on a curve. (Special-cased
+    // in main — spends a live round, and the gull takes it PERSONALLY.)
+    { id: 'gull1', x: -1.4, z: 39.6, radius: 1.6, prompt: 'Shoot the seagull?', kind: 'inspect', once: false },
     {
       id: 'protestField', x: -9, z: 3, radius: 2.4, prompt: 'Look at them', kind: 'inspect', once: false,
       inspectText: 'Dozens of them, dropped mid-march. Signs still in hand: WE ARE NOT YOUR CONTROL GROUP. OUR KIDS DRANK IT TOO.',

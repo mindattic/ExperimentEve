@@ -38,6 +38,8 @@ export abstract class Enemy {
 
   /** Seconds since death; drives the corpse hold + sink in updateAlways. */
   private deathAge = 0;
+  /** Sink speed (m/s) after the corpse hold — fliers need more to land. */
+  protected deathSinkRate = 1.4;
 
   /** The corpse has finished sinking — safe to pull from the scene. */
   get deathDone(): boolean {
@@ -167,7 +169,7 @@ export abstract class Enemy {
       this.deathAge += realDt;
       const sink = Math.max(0, this.deathAge - 0.9);
       if (sink > 0) {
-        this.object.position.y -= realDt * 1.4;
+        this.object.position.y -= realDt * this.deathSinkRate;
         const s = Math.max(0.05, 1 - sink * 0.4);
         this.object.scale.setScalar(s);
       }

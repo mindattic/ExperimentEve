@@ -29,6 +29,7 @@ import { InventoryMenu } from './ui/inventoryMenu';
 import { loadLevel, triggerContains } from './level/levelLoader';
 import { LEVEL01 } from './level/level01';
 import { buildProtestField } from './level/props/protestField';
+import { buildShore } from './level/props/shore';
 import { GraffitiWall } from './level/props/graffiti';
 import { buildHouse, buildStorefront, buildStreetLamp } from './level/props/facades';
 import { placeModels } from './level/props/modelLoader';
@@ -89,6 +90,10 @@ scene.add(level.root);
 
 // The June 20th march ended here. West end of the cross street.
 scene.add(buildProtestField(-13, 0.8, -5.5, 5.2, 22));
+
+// The shore: black water, granite, the wrecked rowboat — and the seagull.
+const shore = buildShore();
+scene.add(shore.group);
 
 // The duel wall: REN vs SOAK, escalating as the night advances.
 const duelWall = new GraffitiWall(-9, 1.7, 0.16, 0);
@@ -625,6 +630,38 @@ function handleInteract(i: Interactable): void {
       break;
     }
     case 'inspect': {
+      if (i.id === 'gull1') {
+        // The other petting prompt. This one grades differently.
+        if (!shore.gullAlive) break;
+        if (state.ammoInClip <= 0) {
+          hud.message('Click. Empty. The gull does not even flinch.');
+          subtitles.say('...We\'re both better off.');
+          break;
+        }
+        state.ammoInClip--;
+        i.used = true;
+        const gp = shore.gullWorldPos();
+        player.facing = Math.atan2(gp.x - player.position.x, gp.z - player.position.z);
+        const muzzle = player.position.clone().add(new THREE.Vector3(Math.sin(player.facing) * 0.35, 1.32, Math.cos(player.facing) * 0.35));
+        muzzleTimer = 0.07;
+        muzzleLight.position.copy(muzzle);
+        particles.tracer(muzzle, gp);
+        particles.burst(gp, { count: 10, color: 0xdcd8cc, colorEnd: 0x8a8a8a, speed: 2.5, life: 0.5, size: 0.07, gravity: 4 }); // feathers
+        rig.kick();
+        cameraMgr.addShake(0.16);
+        sfx.gunshot();
+        input.rumble(120, 0.4, 0.8);
+        shore.removeGull();
+        const puffer = spawnEnemy('puffergull');
+        if (puffer) {
+          puffer.object.position.copy(gp);
+          currentEncounter = 'none';
+          battle.start([puffer]);
+          subtitles.say('Sorry! Reflex. Bad reflex.', 2.4);
+          subtitles.say('...Why is it INFLATING.', 2.8);
+        }
+        break;
+      }
       if (i.id === 'nest1') {
         if (inventory.count('molotov') > 0) {
           inventory.remove('molotov');
@@ -1066,8 +1103,43 @@ squad.onAlert = (enemies, executed) => {
   window.setTimeout(() => battle.start(enemies.filter((e) => !e.dead)), executed ? 900 : 200);
 };
 
-// ---- Train intro: she rides in, jumps, the train doesn't stop ----------
-let introTimer = 0;
+// ---- Shipwreck intro: she wakes on the shore as the 8 PM bells toll ----
+// Eyelids (curved black lids) + a blur that burns off as her eyes focus.
+let wake: { t: number; said: boolean } | null = null;
+const lidCss = 'position:absolute;left:-5%;width:110%;height:0;background:#000;z-index:30;pointer-events:none;';
+const lidTop = document.createElement('div');
+lidTop.style.cssText = lidCss + 'top:0;border-radius:0 0 50% 50%';
+const lidBottom = document.createElement('div');
+lidBottom.style.cssText = lidCss + 'bottom:0;border-radius:50% 50% 0 0';
+hudEl.append(lidTop, lidBottom);
+function setLids(open01: number, blurPx: number): void {
+  const h = 52 * (1 - open01);
+  lidTop.style.height = `${h}%`;
+  lidBottom.style.height = `${h}%`;
+  canvas.style.filter = blurPx > 0.2 ? `blur(${blurPx.toFixed(1)}px)` : '';
+}
+// Blink choreography: [start, end, openFrom, openTo] — two false starts,
+// then the world stays.
+const BLINKS: readonly [number, number, number, number][] = [
+  [0.0, 1.1, 0, 0],
+  [1.1, 1.7, 0, 0.35],
+  [1.7, 2.2, 0.35, 0.02],
+  [2.2, 3.1, 0.02, 0.7],
+  [3.1, 3.5, 0.7, 0.08],
+  [3.5, 4.6, 0.08, 1],
+];
+function blinkOpen(t: number): number {
+  for (const [a, b, from, to] of BLINKS) {
+    if (t < b) {
+      const k = Math.max(0, (t - a) / (b - a));
+      return from + (to - from) * (k * k * (3 - 2 * k));
+    }
+  }
+  return 1;
+}
+
+// ---- The 11 PM freight (the train survives the intro rewrite; Kingsport
+// keeps its railroad, Kat just didn't arrive on it) ----------------------
 const train = new THREE.Group();
 {
   const trainMat = new THREE.MeshLambertMaterial({ color: 0x3a4048 });
@@ -1157,11 +1229,11 @@ const title = new TitleScreen(hudEl);
 function startNewGame(): void {
   mode = 'game';
   title.hide();
-  introTimer = 3.4;
-  train.visible = true;
-  train.position.x = -46;
-  // What she carries off the train: one clip, the reason she's going,
-  // and the coat she left the ER in.
+  // She comes to on the shore gravel, eyes shut, bells starting.
+  wake = { t: 0, said: false };
+  setLids(0, 6);
+  // What she carries ashore: one clip, the reason she's going, and the
+  // coat she left the ER in. The boat didn't make it. She did.
   inventory.add('katsCard');
   inventory.add('labCoat');
   state.equipped.torso = 'labCoat';
@@ -1314,12 +1386,15 @@ function frame(): void {
     if (battle.playerControlled && !menuOpen && !chiming && !reloading && sample.dodgeJust) tryDodge();
     battle.update(realDt, gameDt, sample, player, cameraMgr.camera, colliders);
   } else {
-    player.locked = menuOpen || chiming || climb !== null || lockpick.open || reloading;
+    player.locked = menuOpen || chiming || climb !== null || lockpick.open || reloading || wake !== null;
     if (!menuOpen && !chiming && !climb && !lockpick.open && !reloading && sample.dodgeJust) tryDodge();
-    for (const t of level.triggers) {
-      if (!t.fired && triggerContains(t, player.position.x, player.position.z)) {
-        t.fired = true;
-        fireTrigger(t.id);
+    // Triggers hold their fire until she's actually on her feet.
+    if (!wake) {
+      for (const t of level.triggers) {
+        if (!t.fired && triggerContains(t, player.position.x, player.position.z)) {
+          t.fired = true;
+          fireTrigger(t.id);
+        }
       }
     }
     state.regen(gameDt);
@@ -1439,6 +1514,7 @@ function frame(): void {
 
   dmgNumbers.update(realDt, cameraMgr.camera);
   particles.update(gameDt);
+  shore.update(gameDt);
   // Ambience animation.
   worldClock.tick(realDt); // the night does not pause for menus
   applyTimeOfDay();
@@ -1479,37 +1555,46 @@ function frame(): void {
     }
   }
 
-  // Train intro: she rides in on the freight line and bails.
-  if (introTimer > 0) {
-    introTimer -= realDt;
+  // Shipwreck intro: eyes open in stages, the bells toll, she gets up.
+  if (wake) {
     player.locked = true;
-    train.position.x += 15 * realDt;
-    const jumpK = Math.min(1, Math.max(0, (3.4 - introTimer - 1.5) / 0.7));
-    if (jumpK <= 0) {
-      // Riding the lead car's doorway.
-      player.position.set(train.position.x + 1.5, 1.2, 34.6);
+    wake.t += realDt;
+    const t = wake.t;
+    setLids(blinkOpen(t), Math.max(0, 6 * (1 - t / 4.6)));
+    if (t < 4.6) {
+      // Face-up on the gravel among the planks the surf spat out.
+      rig.root.rotation.x = -1.45;
+      rig.root.position.y = -0.58;
+      rig.root.position.z = -0.2;
+    } else if (t < 6.1) {
+      // She gets up — slow, everything hurts, nothing broken.
+      const k = Math.min(1, (t - 4.6) / 1.5);
+      const ease = k * k * (3 - 2 * k);
+      rig.root.rotation.x = -1.45 * (1 - ease);
+      rig.root.position.y = -0.58 * (1 - ease);
+      rig.root.position.z = -0.2 * (1 - ease);
+      if (!wake.said) {
+        wake.said = true;
+        subtitles.say('I made it. But where to?', 3.2);
+      }
     } else {
-      // The jump: arc from the moving car down to the gravel.
-      const fromX = train.position.x + 1.5;
-      player.position.x = fromX + (0 - fromX) * jumpK * 0.25 + 0; // she lands where she lands
-      player.position.x = jumpK < 1 ? fromX * (1 - jumpK) + 0 * jumpK : 0;
-      player.position.z = 34.6 + (36 - 34.6) * jumpK;
-      player.position.y = Math.max(0, Math.sin(jumpK * Math.PI) * 0.9 + (1 - jumpK) * 1.2);
-      player.facing = Math.PI;
-    }
-    if (introTimer <= 0) {
-      player.position.set(0, 0, 36);
-      player.position.y = 0;
+      rig.root.rotation.x = 0;
+      rig.root.position.y = 0;
+      rig.root.position.z = 0;
+      setLids(1, 0);
+      wake = null;
+      player.locked = false;
     }
   }
-  if (train.visible && introTimer <= 0) {
-    train.position.x += 15 * realDt; // keeps going without her
+  if (train.visible) {
+    train.position.x += 15 * realDt; // the 11 o'clock freight, no brakes
     if (train.position.x > 70) train.visible = false;
   }
 
   // Hourly chime: the bells ring out the hour, ambient. Play continues.
   const nowHour = hourOf(worldClock.minutesOfDay);
-  if (!chime && nowHour > lastChimedHour && audio.unlocked && introTimer <= 0) {
+  // (The 8 PM bells ring over the wake-up — that's the point of them.)
+  if (!chime && nowHour > lastChimedHour && audio.unlocked) {
     lastChimedHour = nowHour;
     const h12 = nowHour % 12 === 0 ? 12 : nowHour % 12;
     chime = { count: h12, played: 0, timer: 0.8, msgTimer: -1 };
@@ -1528,7 +1613,7 @@ function frame(): void {
   }
 
   // Scheduled story beats fire as their hour arrives.
-  if (mode === 'game' && introTimer <= 0) {
+  if (mode === 'game' && !wake) {
     for (const ev of timedEvents) {
       if (!ev.fired && worldClock.minutesOfDay >= ev.at) {
         ev.fired = true;

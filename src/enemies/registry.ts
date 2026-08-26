@@ -10,6 +10,7 @@ import { Quillspray } from './quillspray';
 import { TentacleDoberman } from './tentacleDoberman';
 import { GutterSerpent } from './gutterSerpent';
 import { StingGull } from './stingGull';
+import { Puffergull } from './puffergull';
 import { ScytheMare } from './scytheMare';
 import { BloatSow } from './bloatSow';
 import { HushFox } from './hushFox';
@@ -57,6 +58,7 @@ export const ENEMY_REGISTRY: Record<string, () => Enemy> = {
   tentacleDoberman: () => new TentacleDoberman(),
   gutterSerpent: () => new GutterSerpent(),
   stingGull: () => new StingGull(),
+  puffergull: () => new Puffergull(),
   scytheMare: () => new ScytheMare(),
   bloatSow: () => new BloatSow(),
   hushFox: () => new HushFox(),
