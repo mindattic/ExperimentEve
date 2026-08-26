@@ -12,7 +12,7 @@ import { Inventory } from './gameplay/inventory';
 import { rollLoot, type Interactable } from './gameplay/interactables';
 import { ITEMS } from './gameplay/inventory';
 import { BattleSystem } from './battle/battle';
-import { RatGullChimera } from './enemies/dummyChimera';
+import { FrogChimera } from './enemies/frogBoss';
 import { Hud } from './ui/hud';
 import { Subtitles } from './ui/subtitles';
 import { InventoryMenu } from './ui/inventoryMenu';
@@ -176,13 +176,10 @@ function fireTrigger(id: string): void {
       window.setTimeout(() => subtitles.say('What a shit hole.'), 1400);
       break;
     case 'frogStreet': {
-      // Frog miniboss arrives M12 — placeholder ambush marks the spot.
-      const a = new RatGullChimera();
-      a.object.position.set(-2, 0, -8);
-      const b = new RatGullChimera();
-      b.object.position.set(2, 0, -9);
-      battle.start([a, b]);
-      subtitles.say('Something moved.');
+      const frog = new FrogChimera();
+      frog.object.position.set(0, 0, -9.5);
+      battle.start([frog]);
+      subtitles.say('...That used to be a frog.');
       break;
     }
   }
