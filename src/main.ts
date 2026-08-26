@@ -21,7 +21,7 @@ import { StatMenu } from './ui/statMenu';
 import { saveGame, loadGame, hasSave, applySave } from './gameplay/saveSystem';
 import { TitleScreen } from './ui/titleScreen';
 import { ApertureOS } from './ui/apertureOS';
-import type { Collider } from './physics/colliders';
+import { lineBlocked, type Collider } from './physics/colliders';
 import { Hud } from './ui/hud';
 import { Subtitles } from './ui/subtitles';
 import { InventoryMenu } from './ui/inventoryMenu';
@@ -34,7 +34,9 @@ import { placeModels } from './level/props/modelLoader';
 import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
 import { WorldAI } from './enemies/worldAI';
+import { AFFLICTED_SPECIES } from './enemies/registry';
 import { ScareDirector } from './gameplay/scares';
+import { Cats } from './gameplay/cats';
 import { ErasureSquad } from './gameplay/erasureSquad';
 
 // ---- Experiment Eve — Kat Weiss in Kingsport's North End (design ref:
@@ -758,18 +760,61 @@ worldAI.addWanderer({ species: 'tentacleDoberman', x: 0, z: -14, region: { minX:
 // A hush fox haunts the CCTV cross street (it shows plainly on the lens).
 worldAI.addWanderer({ species: 'hushFox', x: 10, z: 3, region: { minX: -13, minZ: 0.5, maxX: 13, maxZ: 5.5 } });
 // The Afflicted wander the streets — the neighbors, what's left of them.
+const AFFLICTED_REGIONS: { minX: number; minZ: number; maxX: number; maxZ: number }[] = [
+  { minX: -3.5, minZ: 7, maxX: 3.5, maxZ: 15 },
+  { minX: -3.5, minZ: 21, maxX: 3.5, maxZ: 29 },
+  { minX: -13, minZ: 1, maxX: -5, maxZ: 5.5 },
+  { minX: 5, minZ: 0.5, maxX: 13, maxZ: 5 },
+  { minX: -3.5, minZ: -16, maxX: 3.5, maxZ: -2 },
+];
 {
-  const spots: [string, number, number, { minX: number; minZ: number; maxX: number; maxZ: number }][] = [
-    ['flailfish', -2, 10, { minX: -3.5, minZ: 7, maxX: 3.5, maxZ: 15 }],
-    ['owlneighbor', 2, 26, { minX: -3.5, minZ: 21, maxX: 3.5, maxZ: 29 }],
-    ['crabwife', -8, 3.5, { minX: -13, minZ: 1, maxX: -5, maxZ: 5.5 }],
-    ['carpsire', 8, 2, { minX: 5, minZ: 0.5, maxX: 13, maxZ: 5 }],
-    ['houndfather', 0, -12, { minX: -3.5, minZ: -16, maxX: 3.5, maxZ: -2 }],
+  const spots: [string, number, number][] = [
+    ['flailfish', -2, 10],
+    ['owlneighbor', 2, 26],
+    ['crabwife', -8, 3.5],
+    ['carpsire', 8, 2],
+    ['houndfather', 0, -12],
   ];
-  for (const [species, x, z, region] of spots) {
+  spots.forEach(([species, x, z], i) => {
+    worldAI.addWanderer({ species, x, z, region: AFFLICTED_REGIONS[i]!, packId: 'afflicted-street' });
+  });
+}
+
+// Density director: the Afflicted thicken as the night deepens — one more
+// drifts onto the streets every half hour past sunset, up to double the dusk
+// population. Spawns land off-camera so nobody pops in under Kat's nose.
+// (This also restocks the streets after a lighthouse save clears them.)
+let afflictedSpawnTimer = 8;
+function afflictedTarget(): number {
+  const pastSunset = worldClock.minutesOfDay - (20 * 60 + 23);
+  return 5 + Math.max(0, Math.min(5, Math.floor(pastSunset / 30)));
+}
+function trySpawnAfflicted(): void {
+  const cols = activeColliders();
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const region = AFFLICTED_REGIONS[Math.floor(Math.random() * AFFLICTED_REGIONS.length)]!;
+    const x = region.minX + Math.random() * (region.maxX - region.minX);
+    const z = region.minZ + Math.random() * (region.maxZ - region.minZ);
+    const d = Math.hypot(x - player.position.x, z - player.position.z);
+    if (d < 12) continue;
+    if (d < 26 && !lineBlocked(x, z, player.position.x, player.position.z, cols)) continue;
+    const species = AFFLICTED_SPECIES[Math.floor(Math.random() * AFFLICTED_SPECIES.length)]!;
     worldAI.addWanderer({ species, x, z, region, packId: 'afflicted-street' });
+    return;
   }
 }
+
+// The cats of Kingsport: five ordinary housecats, untouched by whatever took
+// everything else, and always out of reach. Watchers perch on rooflines and
+// wall tops and track Kat; skitters bolt into an alley the moment she closes.
+const cats = new Cats(scene, [
+  { coat: 'tuxedo', kind: 'watcher', x: -5.2, y: 3.05, z: 21 }, // house1 roofline over street A
+  { coat: 'black', kind: 'watcher', x: -9, y: 3.25, z: 0 }, // graffiti wall top, above the duel
+  { coat: 'gray', kind: 'watcher', x: 4, y: 3.25, z: -9 }, // south street wall, above the houndfather's beat
+  { coat: 'calico', kind: 'skitter', x: -2.5, y: 0, z: 12, escape: [-7, 12] }, // west alley gap
+  { coat: 'tabby', kind: 'skitter', x: 2.5, y: 0, z: 24, escape: [7, 24] }, // east alley gap
+]);
+cats.onFirstSight = () => subtitles.say('A cat. A normal one. How\'d you stay you?');
 
 // Crow-spider nest in a backyard keeps juveniles trickling into street A.
 worldAI.addNest({ species: 'crowSpider', x: -12.5, z: 17, capacity: 2, intervalSec: 45, region: { minX: -13, minZ: 7, maxX: 3, maxZ: 28 } });
@@ -906,7 +951,7 @@ if (sessionStorage.getItem('eve-auto-continue') === '1' && hasSave()) {
 }
 
 // Dev console handle (also used by automated drive tests).
-(window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player, worldAI, scene, lockpick };
+(window as unknown as Record<string, unknown>)['__eve'] = { state, battle, inventory, player, worldAI, scene, lockpick, worldClock, cats };
 
 function frame(): void {
   const menuOpen = invMenu.open || statMenu.open || os.open || pawnMenu.open;
@@ -1003,7 +1048,13 @@ function frame(): void {
     }
   }
   worldAI.update(gameDt, player.position, colliders, battle.active);
+  afflictedSpawnTimer -= gameDt;
+  if (afflictedSpawnTimer <= 0) {
+    afflictedSpawnTimer = 5 + Math.random() * 4;
+    if (worldAI.countPack('afflicted-street') < afflictedTarget()) trySpawnAfflicted();
+  }
   scares.update(gameDt);
+  cats.update(gameDt, player.position);
   player.update(gameDt, moveDir, sample.magnitude, colliders);
 
   // Bike ram resolution + durability.

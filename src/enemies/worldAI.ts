@@ -179,6 +179,15 @@ export class WorldAI {
     }
   }
 
+  /** Live wanderers carrying a pack id (density-director bookkeeping). */
+  countPack(packId: string): number {
+    let n = 0;
+    for (const w of this.wanderers) {
+      if (!w.enemy.dead && w.def.packId === packId) n++;
+    }
+    return n;
+  }
+
   /** Remove a wanderer from the sim (it moved into a battle). */
   extract(enemy: Enemy): void {
     this.wanderers = this.wanderers.filter((w) => w.enemy !== enemy);
