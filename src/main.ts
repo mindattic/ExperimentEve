@@ -491,9 +491,27 @@ function fireTrigger(id: string): void {
       input.rumble(220, 0.5, 0.9);
       break;
     case 'dogFence':
-      scares.dogFence(19, 23, -12);
+      scares.dogFence(19.5, 23, -17.3);
       subtitles.say('The fence. The fence is holding. It\'s holding.');
       break;
+    case 'corridorAmbush': {
+      // Pinched in the corridor — and then the Observer proves itself.
+      const south = new CrowSpider();
+      south.object.position.set(24.5, 0, -19.5);
+      const north = new CrowSpider();
+      north.object.position.set(24.5, 0, -7);
+      currentEncounter = 'none';
+      battle.start([south, north]);
+      subtitles.say('Both ends. Both ends—');
+      window.setTimeout(() => {
+        state.flags['observerGate'] = true;
+        sfx.uiConfirm();
+        sfx.alarmClang();
+        hud.message('The side-gate lock buzzes open.');
+        subtitles.say('...Nobody pressed anything.', 3);
+      }, 1600);
+      break;
+    }
   }
 }
 

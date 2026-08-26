@@ -1,7 +1,7 @@
 ﻿{
     "statusLine":  {
                        "type":  "command",
-                       "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File \"%CLAUDE_PROJECT_DIR%\\.claude\\statusline.ps1\""
+                       "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PROJECT_DIR}/.claude/statusline.ps1\""
                    },
     "hooks":  {
                   "UserPromptSubmit":  [
@@ -9,11 +9,11 @@
                                                "hooks":  [
                                                              {
                                                                  "type":  "command",
-                                                                 "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\quickload-on-do.ps1\""
+                                                                 "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PROJECT_DIR}/.claude/hooks/quickload-on-do.ps1\""
                                                              },
                                                              {
                                                                  "type":  "command",
-                                                                 "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\prose-outbox.ps1\""
+                                                                 "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PROJECT_DIR}/.claude/hooks/prose-outbox.ps1\""
                                                              }
                                                          ]
                                            }

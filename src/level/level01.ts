@@ -76,6 +76,16 @@ export const LEVEL01: LevelDef = {
       fov: 60,
     },
     {
+      id: 'pocketYard',
+      polygon: [[18, -16], [23, -16], [23, -6], [18, -6]],
+      cameraPosition: [18.8, 3.6, -15.2],
+      cameraLookAt: [21.5, 0.8, -10],
+      forward: [0, 1],
+      // Another of the Observer's lenses: it pans, and it saw this coming.
+      mode: 'cctv',
+      fisheye: 0.22,
+    },
+    {
       id: 'corridorN',
       polygon: [[22.5, -18], [26.5, -18], [26.5, -5], [22.5, -5]],
       cameraPosition: [24.5, 3.5, -17.5],
@@ -137,6 +147,11 @@ export const LEVEL01: LevelDef = {
     // Garage (brick shell), door gap x[23,26] on the south wall.
     // Boarded shortcut panel (axe-choppable) in the east alley fence line.
     { a: [4, 18], b: [4, 19.2], tex: 'plank', h: 2.1, gated: 'chopped1' },
+    // The Observer's gate: electric-locked side gate in the corridor fence.
+    { a: [23, -13], b: [23, -11.6], tex: 'plank', h: 2.2, gated: 'observerGate' },
+    // Pocket yard enclosure (west/south).
+    { a: [18, -16], b: [18, -6], invisible: true },
+    { a: [18, -16], b: [23, -16], invisible: true },
     { a: [18, -6], b: [23, -6], tex: 'brick', h: 3.4 },
     { a: [26, -6], b: [30, -6], tex: 'brick', h: 3.4 },
     { a: [18, -6], b: [18, 2], tex: 'brick', h: 3.4 },
@@ -162,7 +177,10 @@ export const LEVEL01: LevelDef = {
     // Chain-link corridor east, then north to the garage.
     { a: [6, -18], b: [23, -18] },
     { a: [6, -21], b: [26, -21] },
-    { a: [23, -18], b: [23, -6] }, // dobermans lunge from behind this one (M15)
+    // Dobermans lunge from behind this run (M15); a padlocked side gate
+    // sits in the gap — the Observer opens it when it matters.
+    { a: [23, -18], b: [23, -13] },
+    { a: [23, -11.6], b: [23, -6] },
     { a: [26, -21], b: [26, -6] },
   ],
 
@@ -229,6 +247,8 @@ export const LEVEL01: LevelDef = {
     { min: [-14, -30], max: [6, -26], tex: 'asphalt' },
     { min: [6, -21], max: [26, -18], tex: 'gravel' },
     { min: [23, -18], max: [26, -6], tex: 'gravel' },
+    { min: [18, -16], max: [23, -6], tex: 'gravel' }, // pocket yard behind the Observer's gate
+    { min: [18, -18.5], max: [23, -16], tex: 'gravel' }, // dog strip south of the yard
     { min: [18, -6], max: [30, 2], tex: 'interior' },
   ],
 
@@ -316,6 +336,11 @@ export const LEVEL01: LevelDef = {
     },
     { id: 'car1', x: 0, z: 1.2, prompt: 'Salvage the dead sedan', kind: 'salvage', salvageType: 'car' },
     { id: 'car2', x: -1.6, z: -13.2, prompt: 'Salvage the dead wagon', kind: 'salvage', salvageType: 'car' },
+    {
+      id: 'yardCache', x: 20.5, z: -12, prompt: 'Open the tow-truck toolbox', kind: 'pickup',
+      inspectText: 'A dented toolbox, left where someone would find it. Rounds, a first-aid kit, and no note.',
+      grants: [{ item: 'ammo9', n: 8 }, { item: 'medkit', n: 1 }],
+    },
     { id: 'couch1', x: -5.7, z: 17.5, prompt: 'Strip the curb couch', kind: 'salvage', salvageType: 'couch' },
     { id: 'bike1', x: 3.4, z: 24.1, prompt: 'Take the bicycle', kind: 'bike', once: false },
   ],
@@ -329,5 +354,6 @@ export const LEVEL01: LevelDef = {
     { id: 'protestBark', polygon: [[-13, 0], [-5, 0], [-5, 6], [-13, 6]], once: true },
     { id: 'shutterScare', polygon: [[-4.5, 21.5], [-3, 21.5], [-3, 24.5], [-4.5, 24.5]], once: true },
     { id: 'dogFence', polygon: [[22.5, -16], [26.5, -16], [26.5, -10], [22.5, -10]], once: true },
+    { id: 'corridorAmbush', polygon: [[22.5, -15], [26.5, -15], [26.5, -12], [22.5, -12]], once: true },
   ],
 };
