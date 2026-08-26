@@ -141,6 +141,41 @@ placeModels(scene, [
   { name: 'tree-shrub', x: 12.4, z: 24.5, scale: 2 },
   { name: 'tree-shrub', x: -12.8, z: 24, scale: 2.4 },
   { name: 'wall-broken-type-a', x: -8.5, z: 6.15, ry: Math.PI, scale: 2 },
+
+  // --- City Pack: units vary per model, so everything uses fit (meters,
+  // largest dimension) and auto-grounding. ---
+  // Dead cars over their hidden salvage colliders.
+  { name: 'city-pack/Car', x: 0.1, z: 2.4, ry: 0.35, fit: 4.2 },
+  { name: 'city-pack/Van', x: -1.6, z: -14.3, ry: -1.35, fit: 4.6 },
+  // Erasure cruiser abandoned at the blockade approach.
+  { name: 'city-pack/Police Car', x: -8.5, z: -19.6, ry: 2.6, fit: 4.2 },
+  // Street furniture.
+  { name: 'city-pack/Fire hydrant', x: 4.4, z: -3.6, fit: 1.0 },
+  { name: 'city-pack/Mailbox', x: -4.5, z: 7.2, ry: Math.PI / 2, fit: 1.3 },
+  { name: 'city-pack/Stop sign', x: 4.5, z: 0.8, ry: Math.PI, fit: 2.6 },
+  { name: 'city-pack/Manhole Cover', x: 0.4, z: 10, fit: 0.9 },
+  { name: 'city-pack/Manhole Cover', x: -0.6, z: -8, fit: 0.9 },
+  { name: 'city-pack/Trash Can', x: -4.4, z: 12.4, fit: 1.0 },
+  { name: 'city-pack/trah bag grey', x: -4.1, z: 11.6, fit: 0.7 },
+  { name: 'city-pack/trah bag grey', x: 3.9, z: 8.3, ry: 1.1, fit: 0.7 },
+  { name: 'city-pack/Debris Papers', x: 0.5, z: 5.5, fit: 1.6 },
+  { name: 'city-pack/Debris Papers', x: -1.8, z: -5.5, ry: 2, fit: 1.6 },
+  // Bus stop sign on the cross street: nobody is coming.
+  { name: 'city-pack/Bus stop sign', x: -0.8, z: 5.5, fit: 2.6 },
+  // The pawnshop fire escape + roof dressing.
+  { name: 'city-pack/Fire Exit', x: 12.15, z: 8.4, ry: -Math.PI / 2, fit: 4.0 },
+  { name: 'city-pack/Roof Exit', x: 7, z: 9, y: 3.65, ry: Math.PI, fit: 1.8 },
+  { name: 'city-pack/Air conditioner', x: 10.8, z: 6.8, y: 3.65, ry: 0.3, fit: 0.9 },
+  { name: 'city-pack/Billboard', x: 8.8, z: 26.9, y: 3.1, ry: Math.PI, fit: 4.5 },
+  // Poster + washing line in the west alley.
+  { name: 'city-pack/Rock band poster', x: -4.35, z: 17.5, ry: Math.PI / 2, y: 0.9, fit: 1.1 },
+  { name: 'city-pack/Washing Line', x: -7.5, z: 28.2, ry: 0.2, fit: 3.4 },
+  // Distant skyline filler beyond the play area (visual only).
+  { name: 'city-pack/Big Building', x: -20, z: -10, ry: Math.PI / 2, fit: 14 },
+  { name: 'city-pack/Building Red', x: 17, z: 14, ry: -Math.PI / 2, fit: 9 },
+  { name: 'city-pack/Building Green', x: -19, z: 12, ry: Math.PI / 2, fit: 9 },
+  { name: 'city-pack/Brown Building', x: 17, z: 26, ry: -Math.PI / 2, fit: 10 },
+  { name: 'city-pack/Pizza Corner', x: -18, z: -2, ry: Math.PI / 2, fit: 9 },
 ]);
 
 // Street lamps: two sound ones and a dying one over the protest field.

@@ -239,18 +239,16 @@ export const LEVEL01: LevelDef = {
     { min: [19, 0.6], max: [19.9, 1.5], h: 0.9, color: 0x4a5560 }, // lamp pedestal
     { min: [18.2, -4.6], max: [18.5, -3.8], h: 0.6, y: 1, color: 0x8a2020, noCollide: true }, // axe case
 
-    // Salvage props: dead cars, a curb couch.
-    { min: [-1, 1.4], max: [1.2, 3.4], h: 1.15, color: 0x54383a }, // dead sedan, cross street
-    { min: [-2.6, -15.2], max: [-0.6, -13.4], h: 1.15, color: 0x3c4652 }, // dead wagon, south street
+    // Salvage props: dead cars (City Pack meshes), a curb couch.
+    { min: [-1, 1.4], max: [1.2, 3.4], h: 1.15, hidden: true }, // dead sedan, cross street
+    { min: [-2.6, -15.2], max: [-0.6, -13.4], h: 1.15, hidden: true }, // dead wagon, south street
     { min: [-6.6, 17.1], max: [-4.9, 17.9], h: 0.75, color: 0x6a4a52 }, // curb couch
 
     // A bicycle leaning on the east fence of street A.
     { min: [3.4, 23.6], max: [3.8, 24.6], h: 0.9, color: 0x8a4420, noCollide: true },
     // Payphone by the pawnshop (the Observer's other channel).
     { min: [12.3, 4.3], max: [12.9, 4.9], h: 2.2, color: 0x2a4a6a },
-    // Fire escape rails on the pawnshop's east face.
-    { min: [12.02, 8.1], max: [12.14, 8.22], h: 3.2, y: 0.5, color: 0x3a3f44, noCollide: true },
-    { min: [12.02, 8.58], max: [12.14, 8.7], h: 3.2, y: 0.5, color: 0x3a3f44, noCollide: true },
+    // (Fire escape visual is now the City Pack 'Fire Exit' model.)
   ],
 
   ground: [
