@@ -81,6 +81,12 @@ export function loadLevel(def: LevelDef): LoadedLevel {
     const w = b.max[0] - b.min[0];
     const d = b.max[1] - b.min[1];
     const h = b.h ?? 1;
+    if (b.hidden) {
+      const col = aabb(b.min[0], b.min[1], b.max[0], b.max[1]);
+      col.topY = (b.y ?? 0) + h;
+      colliders.push(col);
+      continue;
+    }
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(w, h, d, Math.max(1, Math.ceil(w / 1.5)), 1, Math.max(1, Math.ceil(d / 1.5))),
       makePS1Material({ color: b.color ?? 0x555a60 }),

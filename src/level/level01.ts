@@ -205,13 +205,13 @@ export const LEVEL01: LevelDef = {
     { min: [-14, 36.6], max: [14, 36.85], h: 0.14, color: 0x8a8f94, noCollide: true },
     { min: [-14, 34.6], max: [14, 37.4], h: 0.05, color: 0x3d3a34, noCollide: true },
 
-    // Street A facades.
-    { min: [-11, 8], max: [-4, 16], h: 3.4, color: 0x4a3f38 },
-    { min: [4, 10], max: [11, 17], h: 3.4, color: 0x3f4448 },
-    { min: [4, 20], max: [11, 27], h: 3.2, color: 0x46413c },
+    // Street A facades (colliders only — facades.ts supplies the meshes).
+    { min: [-11, 8], max: [-4, 16], h: 3.4, hidden: true },
+    { min: [4, 10], max: [11, 17], h: 3.4, hidden: true }, // MEGAHIT VIDEO
+    { min: [4, 20], max: [11, 27], h: 3.2, hidden: true },
 
-    // Pawnshop (cross street, north side).
-    { min: [6, 6], max: [12, 10], h: 3.6, color: 0x513f33 },
+    // Pawnshop (cross street, north side; collider only).
+    { min: [6, 6], max: [12, 10], h: 3.6, hidden: true },
 
     // House1 furniture.
     { min: [-10.8, 26.2], max: [-10, 27], h: 0.55, color: 0x6a5747 }, // nightstand

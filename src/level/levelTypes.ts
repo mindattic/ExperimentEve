@@ -22,6 +22,8 @@ export interface BoxDef {
   color?: number;
   /** Visual-only (no collider). */
   noCollide?: boolean;
+  /** Collider-only (a fancier prop mesh stands in visually). */
+  hidden?: boolean;
 }
 
 export interface FenceDef {

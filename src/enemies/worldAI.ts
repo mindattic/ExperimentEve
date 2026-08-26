@@ -75,6 +75,9 @@ export class WorldAI {
   private rats: Rat[] = [];
   /** Set when a wanderer reaches the player: main starts a battle with them. */
   onPlayerContact: ((enemies: Enemy[]) => void) | null = null;
+  /** Ambient vocalization: species id + distance to the player. */
+  onVocal: ((species: string, dist: number) => void) | null = null;
+  private vocalTimer = 3;
 
   /** Burn/destroy the nearest nest within `radius`. Returns true if one died. */
   destroyNestNear(x: number, z: number, radius = 2.5): boolean {
@@ -194,6 +197,20 @@ export class WorldAI {
   update(gameDt: number, playerPos: THREE.Vector3, colliders: readonly Collider[], playerInBattle: boolean): void {
     if (gameDt <= 0) return;
     this.alarmTimer = Math.max(0, this.alarmTimer - gameDt);
+
+    // Something out there makes a noise every few seconds. Hush foxes don't.
+    this.vocalTimer -= gameDt;
+    if (this.vocalTimer <= 0) {
+      this.vocalTimer = 3.5 + Math.random() * 5;
+      const near = this.wanderers.filter(
+        (w) => !w.enemy.dead && w.def.species !== 'hushFox' &&
+          w.enemy.object.position.distanceTo(playerPos) < 15,
+      );
+      const pick = near[Math.floor(Math.random() * near.length)];
+      if (pick) {
+        this.onVocal?.(pick.def.species, pick.enemy.object.position.distanceTo(playerPos));
+      }
+    }
 
     // Nests spawn juveniles up to capacity.
     for (const n of this.nests) {

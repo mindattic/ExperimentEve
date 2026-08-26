@@ -28,6 +28,7 @@ import { loadLevel, triggerContains } from './level/levelLoader';
 import { LEVEL01 } from './level/level01';
 import { buildProtestField } from './level/props/protestField';
 import { GraffitiWall } from './level/props/graffiti';
+import { buildHouse, buildStorefront, buildStreetLamp } from './level/props/facades';
 import { AudioEngine } from './audio/audioEngine';
 import { Sfx, AmbienceBed } from './audio/sfx';
 import { WorldAI } from './enemies/worldAI';
@@ -84,6 +85,46 @@ scene.add(buildProtestField(-13, 0.8, -5.5, 5.2, 22));
 // The duel wall: REN vs SOAK, escalating as the night advances.
 const duelWall = new GraffitiWall(-9, 1.7, 0.16, 0);
 scene.add(duelWall.mesh);
+
+// Final facades over the hidden collider boxes.
+{
+  const west = buildHouse({ w: 8, d: 7, h: 3.4, tint: 0xb8a898, litWindow: true });
+  west.position.set(-7.5, 0, 12);
+  west.rotation.y = Math.PI / 2; // front faces the street (east)
+  scene.add(west);
+
+  const video = buildStorefront({
+    w: 7, d: 7, h: 3.4,
+    sign: ['MEGAHIT VIDEO'], signBg: '#14206a', signFg: '#f4e04a', barred: false,
+  });
+  video.position.set(7.5, 0, 13.5);
+  video.rotation.y = Math.PI / 2; // front faces the street (west)
+  scene.add(video);
+
+  const north = buildHouse({ w: 7, d: 7, h: 3.2, tint: 0x9aa4a8 });
+  north.position.set(7.5, 0, 23.5);
+  north.rotation.y = -Math.PI / 2;
+  scene.add(north);
+
+  const pawn = buildStorefront({
+    w: 6, d: 4, h: 3.6,
+    sign: ['PAWN', 'BUY · SELL · SURVIVE'], signBg: '#3a2a10', signFg: '#e8c860', barred: true,
+  });
+  pawn.position.set(9, 0, 8);
+  scene.add(pawn);
+}
+
+// Street lamps: two sound ones and a dying one over the protest field.
+const flickerLamp = buildStreetLamp();
+flickerLamp.group.position.set(-5.2, 0, 1);
+flickerLamp.group.rotation.y = Math.PI;
+scene.add(flickerLamp.group);
+for (const [lx, lz, ry] of [[2.5, -2.5, Math.PI], [-2.5, 14, 0]] as const) {
+  const lamp2 = buildStreetLamp();
+  lamp2.group.position.set(lx, 0, lz);
+  lamp2.group.rotation.y = ry;
+  scene.add(lamp2.group);
+}
 
 // Dynamic set-dressing: truck fire + lighthouse save lamp.
 const fireGroup = new THREE.Group();
@@ -624,6 +665,16 @@ worldAI.addWanderer({ species: 'hushFox', x: 10, z: 3, region: { minX: -13, minZ
 // Crow-spider nest in a backyard keeps juveniles trickling into street A.
 worldAI.addNest({ species: 'crowSpider', x: -12.5, z: 17, capacity: 2, intervalSec: 45, region: { minX: -13, minZ: 7, maxX: 3, maxZ: 28 } });
 worldAI.addRats(7, 0, 32, 16);
+worldAI.onVocal = (species) => {
+  if (!audio.unlocked) return;
+  switch (species) {
+    case 'ratGull': sfx.hiss(); break;
+    case 'tentacleDoberman': sfx.bark(); break;
+    case 'crowSpider': sfx.wingFlutter(); break;
+    case 'frog': sfx.croak(); break;
+    default: sfx.hiss();
+  }
+};
 worldAI.onPlayerContact = (enemies) => {
   if (!battle.active) {
     currentEncounter = 'none';
@@ -1007,6 +1058,9 @@ function frame(): void {
   }
   lampLight.intensity = 1.1 + Math.sin(t * 2.4) * 0.5;
   lamp.rotation.y = t * 1.8;
+  // The lamp over the dead marchers can't hold a charge.
+  flickerLamp.light.intensity =
+    Math.sin(t * 13.7) + Math.sin(t * 7.1) > 1.2 ? 0.15 : 1.5;
 
   if (muzzleTimer > 0) {
     muzzleTimer -= realDt;
