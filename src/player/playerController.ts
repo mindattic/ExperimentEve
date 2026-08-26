@@ -14,9 +14,34 @@ export class PlayerController {
   turnRate = 12; // rad/s toward the move direction
 
   private readonly vel = new THREE.Vector3();
+  private readonly dodgeDir = new THREE.Vector3();
+  private dodgeTimer = 0;
+  private dodgeCooldown = 0;
+  private iFrames = 0;
+  /** While true (menus, cutscenes, fire animation) input is ignored. */
+  locked = false;
 
   get position(): THREE.Vector3 {
     return this.object.position;
+  }
+
+  get iFramesActive(): boolean {
+    return this.iFrames > 0;
+  }
+
+  get dodging(): boolean {
+    return this.dodgeTimer > 0;
+  }
+
+  /** Try to start a dodge roll: burst of speed + i-frames. */
+  dodge(moveDir: THREE.Vector3 | null): boolean {
+    if (this.locked || this.dodgeCooldown > 0) return false;
+    if (moveDir) this.dodgeDir.copy(moveDir).normalize();
+    else this.dodgeDir.set(Math.sin(this.facing + Math.PI), 0, Math.cos(this.facing + Math.PI));
+    this.dodgeTimer = 0.3;
+    this.dodgeCooldown = 0.9;
+    this.iFrames = 0.45;
+    return true;
   }
 
   update(
@@ -25,6 +50,17 @@ export class PlayerController {
     magnitude: number,
     colliders: readonly Collider[],
   ): void {
+    this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
+    this.iFrames = Math.max(0, this.iFrames - dt);
+    if (this.dodgeTimer > 0) {
+      this.dodgeTimer -= dt;
+      this.object.position.addScaledVector(this.dodgeDir, 8.5 * dt);
+      resolveCircle(this.object.position, PLAYER_RADIUS, colliders);
+      this.facing = Math.atan2(this.dodgeDir.x, this.dodgeDir.z);
+      this.object.rotation.y = this.facing;
+      return;
+    }
+    if (this.locked) moveDir = null;
     if (moveDir) {
       const speed = this.runSpeed * magnitude;
       this.vel.set(moveDir.x * speed, 0, moveDir.z * speed);

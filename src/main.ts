@@ -8,6 +8,11 @@ import { InputLatch } from './camera/inputLatch';
 import { PlayerController } from './player/playerController';
 import { PlayerRig } from './player/playerRig';
 import { segment, type Collider } from './physics/colliders';
+import { GameClock } from './core/clock';
+import { GameState } from './gameplay/gameState';
+import { BattleSystem } from './battle/battle';
+import { RatGullChimera } from './enemies/dummyChimera';
+import { Hud } from './ui/hud';
 
 // ---- M3-M6 test level: L-shaped street, three fixed cameras (one rotated
 // 90°, one reversed), latch-driven movement, wall collision.
@@ -32,9 +37,9 @@ const pipeline = new LowResPipeline(canvas);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0a12);
-scene.fog = new THREE.Fog(0x0a0a12, 8, 40);
+scene.fog = new THREE.Fog(0x0a0a12, 12, 55);
 
-scene.add(new THREE.HemisphereLight(0x9aa8c8, 0x2a201c, 1.1));
+scene.add(new THREE.HemisphereLight(0x9aa8c8, 0x2a201c, 1.35));
 const dir = new THREE.DirectionalLight(0xffeedd, 0.6);
 dir.position.set(3, 6, 2);
 scene.add(dir);
@@ -102,8 +107,8 @@ const zones = [
   new CameraZone({
     id: 'corridor-east',
     polygon: [[2, -2], [14, -2], [14, 2], [2, 2]],
-    cameraPosition: [15.5, 2.6, 0],
-    cameraLookAt: [6, 1, 0],
+    cameraPosition: [13.2, 2.8, 0],
+    cameraLookAt: [5, 0.8, 0],
     forward: [-1, 0],
   }),
 ];
@@ -121,10 +126,11 @@ scene.add(player.object);
 const input = new Input();
 const latch = new InputLatch();
 
-const hud = document.getElementById('hud')!;
+const hudEl = document.getElementById('hud')!;
 const debugLine = document.createElement('div');
+debugLine.id = 'dbgline';
 debugLine.style.cssText = 'position:absolute;left:8px;bottom:6px;font-size:12px;opacity:.75';
-hud.appendChild(debugLine);
+hudEl.appendChild(debugLine);
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyP') pipeline.enabled = !pipeline.enabled;
@@ -133,19 +139,64 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-const clock = new THREE.Clock();
+// --- game systems (M8) ---
+const gameClock = new GameClock();
+const state = new GameState();
+const hud = new Hud(hudEl);
+const battle = new BattleSystem(state, scene, hudEl, canvas);
+battle.onMessage = (t) => hud.message(t);
+const muzzleLight = new THREE.PointLight(0xffcc88, 0, 6);
+scene.add(muzzleLight);
+let muzzleTimer = 0;
+battle.onShot = () => {
+  muzzleTimer = 0.07;
+  muzzleLight.position.copy(player.position).add(new THREE.Vector3(0, 1.3, 0));
+  input.rumble(120, 0.4, 0.8);
+};
+
+// Dev console handle (also used by automated drive tests).
+(window as unknown as Record<string, unknown>)['__eve'] = { state, battle };
+
 function frame(): void {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  gameClock.timeScale = battle.wantsPause ? 0 : 1;
+  const { realDt, gameDt } = gameClock.tick();
   const sample = input.sample();
+
   cameraMgr.update(player.position.x, player.position.z);
   const moveDir = latch.update(sample, cameraMgr.activeZone);
-  player.update(dt, moveDir, sample.magnitude, colliders);
-  rig.update(dt, moveDir ? sample.magnitude : 0);
+
+  if (battle.active) {
+    player.locked = !battle.playerControlled;
+    if (battle.playerControlled && sample.dodgeJust) player.dodge(moveDir);
+    battle.update(realDt, gameDt, sample, player, cameraMgr.camera, colliders);
+  } else {
+    player.locked = false;
+    if (sample.dodgeJust) player.dodge(moveDir);
+    // Test encounter: entering the east corridor wakes two chimeras.
+    if (cameraMgr.activeZone?.id === 'corridor-east' && !state.flags['testBattle']) {
+      state.flags['testBattle'] = true;
+      const a = new RatGullChimera();
+      a.object.position.set(10, 0, -1);
+      const bEnemy = new RatGullChimera();
+      bEnemy.object.position.set(12, 0, 1);
+      battle.start([a, bEnemy]);
+    }
+  }
+  player.update(gameDt, moveDir, sample.magnitude, colliders);
+  rig.pose = battle.phase === 'fire' ? 'aim' : 'explore';
+  rig.update(gameDt, moveDir && !player.locked ? sample.magnitude : 0);
+  if (!battle.active) state.regen(gameDt);
+
+  if (muzzleTimer > 0) {
+    muzzleTimer -= realDt;
+    muzzleLight.intensity = muzzleTimer > 0 ? 3 : 0;
+  }
+
+  hud.update(realDt, state, battle);
   debugLine.textContent =
-    `zone: ${cameraMgr.activeZone?.id ?? '-'}  ` +
-    `pad: ${sample.padConnected ? 'connected' : 'keyboard'}  ` +
-    `pos: ${player.position.x.toFixed(1)},${player.position.z.toFixed(1)}  ` +
-    `[P]ipeline [O]snap`;
+    `zone: ${cameraMgr.activeZone?.id ?? '-'}  battle: ${battle.phase}  ` +
+    `pad: ${sample.padConnected ? 'pad' : 'kb'}  ` +
+    `pos: ${player.position.x.toFixed(1)},${player.position.z.toFixed(1)}  [P]ipe [O]snap`;
   pipeline.render(scene, cameraMgr.camera);
   requestAnimationFrame(frame);
 }
