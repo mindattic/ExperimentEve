@@ -8,6 +8,12 @@
   `public/models/city-pack/`): buildings, vehicles, street furniture,
   fire exit. TODO: record the original source/license here (looks like a
   Quaternius/Poly-style CC0 pack — confirm).
+- **Michelle** and **Soldier** (`public/models/michelle/`, `public/models/soldier/`):
+  Mixamo-rigged glTF characters bundled with three.js's own examples
+  (`examples/models/gltf/`). Free for any use, no attribution required.
+  Used by `src/dev/characterPreview.ts`, a standalone full-fidelity PBR
+  character preview (WASD locomotion, retargeted Idle/Walk/Run) kept
+  separate from the PS1 game pipeline — see `character-preview.html`.
 - All other meshes are procedural (Three.js primitives), all audio is
   synthesized at runtime (WebAudio), all textures outside the kit are
   generated CanvasTextures.

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Character Preview — Michelle</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      #app {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+      canvas { display: block; }
+      #hint {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 13px;
+        color: #eee;
+        background: rgba(0, 0, 0, 0.45);
+        padding: 8px 12px;
+        border-radius: 6px;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="preview"></canvas>
+      <div id="hint">WASD / arrows to move &middot; hold Shift to run &middot; drag to orbit &middot; scroll to zoom</div>
+    </div>
+    <script type="module" src="/src/dev/characterPreview.ts"></script>
+  </body>
+</html>
