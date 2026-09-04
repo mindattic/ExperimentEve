@@ -10,9 +10,11 @@ import {
 import type { InputSample } from '../core/input';
 import type { EnemyActor, EnemyPart } from '../enemies/enemyActor';
 import type { GameState } from '../gameplay/gameState';
+import type { Collider } from '../physics/colliders';
 import type { PlayerController } from '../player/playerController';
 import type { BattleHud } from '../ui/battleHud';
 import { projectToScreen } from '../ui/screen';
+import type { CombatFx } from './combatFx';
 
 // EVEGDD Ch.3: the ATB battle, Parasite-Eve lineage stated outright. Real time
 // runs until the gauge fills; the gauge buys a menu; the menu stops the world
@@ -44,6 +46,8 @@ interface TargetEntry {
 
 const WEAPON_RANGE = 6;
 const DISENGAGE_RANGE = 16;
+/** How many of them may be mid-swing at once, however many turned up. */
+const MAX_COMMITTED = 2;
 
 export class BattleSystem {
   phase: BattlePhase = 'inactive';
@@ -65,6 +69,8 @@ export class BattleSystem {
   private readonly ring: Mesh;
   private readonly marker: Mesh;
   private readonly worldPoint = new Vector3();
+  private readonly muzzle = new Vector3();
+  private readonly chest = new Vector3();
 
   onKill: ((enemy: EnemyActor, wasLast: boolean) => void) | null = null;
   onVictory: (() => void) | null = null;
@@ -80,6 +86,9 @@ export class BattleSystem {
     private readonly state: GameState,
     private readonly scene: Scene,
     private readonly hud: BattleHud,
+    private readonly fx: CombatFx,
+    /** The street they're fighting in — creatures close on her around it. */
+    private readonly colliders: readonly Collider[],
   ) {
     const glow = (hex: string, alpha: number): StandardMaterial => {
       const mat = new StandardMaterial(`battleGlow-${hex}`, scene);
@@ -160,6 +169,7 @@ export class BattleSystem {
     this.phase = 'active';
     this.hud.setVisible(true);
     this.hud.message('CHIMERAS ATTACK');
+    this.fx.encounter();
   }
 
   update(
@@ -175,6 +185,7 @@ export class BattleSystem {
       enemy.updateAlways(realDt);
       if (enemy.dead && !this.killsSeen.has(enemy)) {
         this.killsSeen.add(enemy);
+        this.fx.kill(enemy.position);
         this.onKill?.(enemy, this.enemiesAlive.length === 0);
         this.hud.message(`${enemy.displayName} is destroyed.`);
       }
@@ -183,6 +194,7 @@ export class BattleSystem {
     if (this.atb >= 1 && !this.atbWasFull) {
       this.atbWasFull = true;
       this.hud.message('ATB READY');
+      this.fx.atbReady();
     } else if (this.atb < 1) {
       this.atbWasFull = false;
     }
@@ -194,11 +206,27 @@ export class BattleSystem {
       this.ring.position.set(player.position.x, 0.06, player.position.z);
     }
 
-    // They only act while the world is running.
+    // They only act while the world is running — a raised sting stays raised
+    // for as long as she stands in the menu deciding what to do about it.
     if (gameDt > 0) {
+      // The pack takes turns. Only MAX_COMMITTED animals may be mid-swing at
+      // once; the rest prowl. Without this every creature that arrives commits
+      // on the frame it arrives, six telegraphs light up together, and a fight
+      // stops being something you read and becomes something that happens to
+      // you — which is exactly the failure the telegraph was added to fix.
+      let committed = 0;
+      for (const enemy of this.enemiesAlive) if (enemy.committed) committed++;
+
       for (const enemy of this.enemiesAlive) {
         if (enemy.tickStun(gameDt)) continue;
-        this.pressAttack(enemy, player, gameDt);
+        const mayCommit = committed < MAX_COMMITTED;
+        const event = enemy.combatTick(gameDt, player.position, this.colliders, mayCommit);
+        if (event === 'telegraph') {
+          committed++;
+          this.fx.telegraph(enemy.voice);
+        } else if (event === 'strike') {
+          this.resolveEnemyStrike(enemy, player);
+        }
       }
       this.separate(player);
     }
@@ -234,7 +262,7 @@ export class BattleSystem {
         break;
       case 'sweepH':
       case 'sweepV':
-        this.updateSweep(realDt, input, camera);
+        this.updateSweep(realDt, input, player, camera);
         break;
       case 'fire':
         this.fireTimer -= realDt;
@@ -243,7 +271,7 @@ export class BattleSystem {
             this.reloadPending = false;
             this.spendTurn();
           } else {
-            this.resolveShot();
+            this.resolveShot(player);
           }
           this.checkVictory();
           if (this.phase === 'fire') this.phase = 'active';
@@ -261,12 +289,37 @@ export class BattleSystem {
     );
   }
 
-  /** Contact damage: nothing has a swing animation budget yet, so they press. */
-  private pressAttack(enemy: EnemyActor, player: PlayerController, gameDt: number): void {
-    const dist = Vector3.Distance(enemy.position, player.position);
-    if (dist > enemy.radius + 0.75) return;
-    if (player.iFramesActive) return;
-    this.state.damagePlayer(enemy.touchDps * gameDt);
+  /**
+   * A swing has arrived. Three outcomes, and the middle one is the whole
+   * reason the dodge exists: it reached her and she wasn't there for it.
+   *
+   * i-frames are checked BEFORE distance deliberately. A dodge that carries her
+   * out of the arc and a dodge that rolls her straight through the bite should
+   * read the same to the player, because from inside a roll they are the same
+   * decision — punishing the second would only teach people to stop rolling.
+   */
+  private resolveEnemyStrike(enemy: EnemyActor, player: PlayerController): void {
+    if (!enemy.strikeConnects(player.position)) {
+      this.fx.swingWide();
+      return;
+    }
+    if (player.iFramesActive) {
+      this.fx.playerEvaded();
+      this.hud.message('She is already somewhere else.');
+      // Reading a tell correctly pays into the gauge. The comeback is earned
+      // by playing well, not only by being chewed on.
+      this.state.addLimit(7);
+      return;
+    }
+
+    const dealt = Math.round(enemy.attackDamage * (0.85 + Math.random() * 0.3));
+    this.state.damagePlayer(dealt);
+    this.chest.set(player.position.x, player.position.y + 1.1, player.position.z);
+    this.fx.playerHit(this.chest, enemy.position, Math.min(1, dealt / 14));
+    this.hud.message(`${enemy.displayName} lands one. (${dealt})`);
+
+    const screen = projectToScreen(this.scene, this.chest);
+    if (screen.onScreen) this.hud.floater(screen.x, screen.y, dealt, false);
   }
 
   /** Nothing stacks into anything else, including into her. */
@@ -276,7 +329,9 @@ export class BattleSystem {
       const a = alive[i]!;
       for (let j = i + 1; j < alive.length; j++) {
         const b = alive[j]!;
-        pushApart(a.position, b.position, a.radius + b.radius, 0.5);
+        // A little more than the sum of the bodies: at fixed-camera distance,
+        // touching creatures read as one creature.
+        pushApart(a.position, b.position, a.radius + b.radius + 0.14, 0.5);
       }
       pushApart(a.position, player.position, a.radius + 0.4, 0);
     }
@@ -307,6 +362,7 @@ export class BattleSystem {
         action: () => {
           const n = s.reload();
           this.hud.message(`${n} rounds. Hands steadier than they should be.`);
+          this.fx.reload();
           this.reloadPending = true;
           this.beginFire(s.reloadSeconds);
         },
@@ -331,10 +387,14 @@ export class BattleSystem {
 
   private updateMenu(input: InputSample): void {
     const entries = this.menuEntries();
-    if (input.navDownJust) this.menuIndex = (this.menuIndex + 1) % entries.length;
-    if (input.navUpJust) this.menuIndex = (this.menuIndex + entries.length - 1) % entries.length;
+    if (input.navDownJust || input.navUpJust) {
+      const step = input.navDownJust ? 1 : entries.length - 1;
+      this.menuIndex = (this.menuIndex + step) % entries.length;
+      this.fx.menuMove();
+    }
     if (input.dodgeJust) {
       this.hud.hideMenu();
+      this.fx.menuDeny();
       this.phase = 'active';
       return;
     }
@@ -342,8 +402,10 @@ export class BattleSystem {
       const entry = entries[this.menuIndex]!;
       if (!entry.enabled) {
         this.hud.message('Not now.');
+        this.fx.menuDeny();
       } else {
         this.hud.hideMenu();
+        this.fx.menuConfirm();
         entry.action();
         return;
       }
@@ -372,12 +434,13 @@ export class BattleSystem {
   }
 
   private updateAim(input: InputSample, player: PlayerController, camera: Camera): void {
-    void player;
     if (input.navLeftJust || input.navUpJust) {
       this.targetIndex = (this.targetIndex + this.targets.length - 1) % this.targets.length;
+      this.fx.menuMove();
     }
     if (input.navRightJust || input.navDownJust) {
       this.targetIndex = (this.targetIndex + 1) % this.targets.length;
+      this.fx.menuMove();
     }
 
     const target = this.targets[this.targetIndex]!;
@@ -389,19 +452,29 @@ export class BattleSystem {
 
     if (input.dodgeJust) {
       this.marker.setEnabled(false);
+      this.fx.menuDeny();
       this.openMenu();
       return;
     }
     if (input.confirmJust) {
       this.marker.setEnabled(false);
+      this.fx.menuConfirm();
       this.pendingCrit = 'none';
+      // She turns onto what she picked. The round has to leave the gun pointing
+      // somewhere, and it had better be at the thing with the marker on it.
+      player.faceToward(target.enemy.position.x, target.enemy.position.z);
       this.beginFire(0.4);
     }
   }
 
   // ---- Precision Aim --------------------------------------------------
 
-  private updateSweep(realDt: number, input: InputSample, camera: Camera): void {
+  private updateSweep(
+    realDt: number,
+    input: InputSample,
+    player: PlayerController,
+    camera: Camera,
+  ): void {
     if (this.phase === 'sweepH') {
       this.sweepT += realDt / 1.3; // full sweep 1.3s, ping-ponging
       const f = pingPong(this.sweepT);
@@ -410,6 +483,7 @@ export class BattleSystem {
         this.lockedY = f;
         this.phase = 'sweepV';
         this.sweepT = 0;
+        this.fx.menuConfirm();
       }
       return;
     }
@@ -419,7 +493,8 @@ export class BattleSystem {
     if (input.confirmJust) {
       this.lockedX = f;
       this.hud.setSweep('none', 0);
-      this.resolvePrecision(camera);
+      this.fx.menuConfirm();
+      this.resolvePrecision(player, camera);
     }
   }
 
@@ -470,13 +545,14 @@ export class BattleSystem {
   }
 
   /** Where the two locked lines crossed, resolved into a shot. */
-  private resolvePrecision(camera: Camera): void {
+  private resolvePrecision(player: PlayerController, camera: Camera): void {
     const found = this.probePrecision(camera, this.lockedX, this.lockedY);
     this.state.limit = 0;
     this.pendingCrit = found?.kind ?? 'miss';
     if (found) {
       this.targets = [found.entry];
       this.targetIndex = 0;
+      player.faceToward(found.entry.enemy.position.x, found.entry.enemy.position.z);
     }
     this.beginFire(0.25);
   }
@@ -488,15 +564,25 @@ export class BattleSystem {
     this.fireTimer = delay;
   }
 
-  private resolveShot(): void {
+  private resolveShot(player: PlayerController): void {
     const s = this.state;
     if (s.ammoInClip <= 0) {
+      this.fx.dryFire();
       this.spendTurn();
       return;
     }
     s.ammoInClip--;
+    const muzzle = player.muzzlePoint(this.muzzle);
 
     if (this.pendingCrit === 'miss') {
+      // The round still exists and still goes somewhere. Draw it going.
+      this.worldPoint.set(
+        muzzle.x + Math.sin(player.facing) * 9,
+        muzzle.y - 0.6,
+        muzzle.z + Math.cos(player.facing) * 9,
+      );
+      this.fx.gunshot(muzzle, this.worldPoint);
+      this.fx.missed(muzzle);
       this.hud.message('The cross finds nothing but air.');
       this.spendTurn();
       return;
@@ -508,6 +594,8 @@ export class BattleSystem {
     }
 
     const wound = target.enemy.aimPoint(target.part, this.worldPoint).clone();
+    this.fx.gunshot(muzzle, wound);
+
     let dealt: number;
     let crit = false;
 
@@ -530,6 +618,11 @@ export class BattleSystem {
       );
       if (crit && !target.enemy.dead) target.enemy.stun(1.2);
     }
+
+    // A round that stopped in armour looks and sounds nothing like one that
+    // went in — the player should be able to tell without reading the number.
+    if (target.part.flatDamage !== undefined) this.fx.armourHit(muzzle, wound);
+    else this.fx.fleshHit(muzzle, wound, crit);
 
     this.floatDamage(wound, dealt, crit);
     s.addLimit(dealt * 0.6);
@@ -568,6 +661,7 @@ export class BattleSystem {
     this.phase = 'won';
     this.victoryTimer = 1.6;
     this.hud.message('The street goes quiet.');
+    this.fx.victory();
     this.onVictory?.();
   }
 
@@ -597,6 +691,8 @@ export class BattleSystem {
         name: e.displayName,
         hp: e.hp,
         dead: e.dead,
+        combat: e.combatState,
+        telegraphing: e.telegraphing,
         parts: e.parts.map((p) => p.tag),
       })),
       target: this.targets[this.targetIndex]

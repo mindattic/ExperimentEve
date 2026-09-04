@@ -1,5 +1,8 @@
 import { PointLight, Scene, Vector3 } from '@babylonjs/core';
+import { AudioEngine } from './audio/audioEngine';
+import { AmbienceBed, Sfx } from './audio/sfx';
 import { BattleSystem } from './battle/battleSystem';
+import { CombatFx } from './battle/combatFx';
 import { type Creature, type SpeciesId } from './enemies/creature';
 import { canFight, EnemyActor } from './enemies/enemyActor';
 import { WorldAI } from './enemies/worldAI';
@@ -20,6 +23,7 @@ import { buildShore } from './level/props/shore';
 import { PlayerCharacter } from './player/playerCharacter';
 import { PlayerController } from './player/playerController';
 import { LightRig } from './render/lightRig';
+import { Particles } from './render/particles';
 import { createEngine, createRendering } from './render/sceneSetup';
 
 // EVEGDD Chapter 2 — Player & Core Loop, on Babylon.
@@ -132,10 +136,25 @@ const worldClock = new WorldClock();
 const gameClock = new GameClock();
 const state = new GameState();
 
+// Sound is synthesized, not sampled: oscillators and filtered noise, no files,
+// nothing to license. The context can't exist before a gesture (autoplay
+// policy), so it's built on the first key or click and everything no-ops until
+// then rather than throwing into the render loop.
+const audio = new AudioEngine();
+const sfx = new Sfx(audio);
+const ambience = new AmbienceBed(audio);
+audio.onReady = () => ambience.start();
+for (const event of ['keydown', 'pointerdown', 'gamepadconnected'] as const) {
+  window.addEventListener(event, () => audio.unlock());
+}
+
+const particles = new Particles(scene);
+
 // EVEGDD Ch.3: the ATB battle. It borrows creatures from the world sim for the
 // duration of a fight and hands the survivors back.
 const battleHud = new BattleHud(hudRoot);
-const battle = new BattleSystem(state, scene, battleHud);
+const combatFx = new CombatFx(sfx, particles, director, input, battleHud);
+const battle = new BattleSystem(state, scene, battleHud, combatFx, level.colliders);
 battle.onEnd = (participants) => {
   for (const actor of participants) {
     if (actor.dead) actor.dispose();
@@ -180,11 +199,16 @@ hint.style.cssText =
   'position:absolute;left:18px;bottom:14px;font:400 12px/1.5 "Courier New",monospace;' +
   'color:#aab2ba;opacity:0.75';
 hint.textContent =
-  'WASD move · Shift walk · Space dodge · Enter confirm · Arrows navigate · E bicycle · T time x120';
+  'WASD move · Shift walk · Space dodge · Enter confirm · Arrows navigate · E bicycle · T time x120\n' +
+  'Gamepad: left stick move · A confirm · B dodge · X bicycle · D-pad navigate';
+hint.style.whiteSpace = 'pre';
 hudRoot.appendChild(hint);
 
 let timeAccelerated = false;
 let lastTimeKey = false;
+// Footsteps come off distance travelled, not off a clip event: the locomotion
+// blend is a crossfade between four clips and has no single footfall to hook.
+let strideAccum = 0;
 
 engine.runRenderLoop(() => {
   // Menus and the Precision Aim sweeps stop the world without stopping the
@@ -192,6 +216,10 @@ engine.runRenderLoop(() => {
   gameClock.timeScale = battle.wantsPause ? 0 : 1;
   const { realDt, gameDt } = gameClock.tick();
   const dt = realDt;
+  // Pause is a time domain, and the particles and the mix live in it too: a
+  // burst hangs mid-air and the street goes muffled while the menu is up.
+  particles.setTimeScale(gameClock.timeScale);
+  audio.setDucked(battle.wantsPause);
 
   // Dev knob: T fast-forwards the night so the lighting ramp is inspectable.
   const timeKey = input.isDown('KeyT');
@@ -221,15 +249,29 @@ engine.runRenderLoop(() => {
 
   if (canMove && sample.dodgeJust) {
     const slide = moveDir !== null && sample.magnitude < 0.6;
-    player.dodge(moveDir, slide);
+    if (player.dodge(moveDir, slide)) combatFx.dodgeRoll();
   }
   if (!battle.active && sample.interactJust) player.riding = !player.riding;
 
   player.update(gameDt, moveIntent, canMove ? sample.magnitude : 0, level.colliders);
   character?.update(realDt, player.speed, player.dodgeProgress, player.sliding);
 
+  // A stride's worth of ground covered is a footfall. Stopping re-arms it just
+  // short of a step, so setting off again sounds off immediately.
+  if (!player.riding && !player.dodging && player.speed > 0.5) {
+    strideAccum += player.speed * gameDt;
+    const stride = player.speed > 2.6 ? 1.25 : 0.85;
+    if (strideAccum >= stride) {
+      strideAccum = 0;
+      combatFx.footstep();
+    }
+  } else if (player.speed < 0.2) {
+    strideAccum = 0.8;
+  }
+
   battle.update(realDt, gameDt, sample, player, director.camera);
   battleHud.update(realDt);
+  particles.update(realDt);
   checkEncounter();
   worldAI.update(gameDt, player.position, level.colliders);
   lightRig.update(player.position);
@@ -287,6 +329,14 @@ window.addEventListener('resize', () => engine.resize());
   gameState: state,
   get battleDebug() {
     return battle.debug;
+  },
+  particles,
+  combatFx,
+  get fxDebug() {
+    return particles.debug;
+  },
+  get audioDebug() {
+    return { unlocked: audio.unlocked, contextState: audio.ctx?.state ?? null };
   },
   /** World -> screen fractions, the same path the HUD and Precision Aim use. */
   project(x: number, y: number, z: number) {

@@ -81,8 +81,9 @@ class Wanderer {
     if (noticed && p.reaction !== 'hold') {
       const strike = p.strike ?? 0;
       if (p.reaction === 'stalk' && distToPlayer <= strike) {
-        // Close enough to be a problem. It has no attack to land until the
-        // battle system exists, so it holds and telegraphs.
+        // Close enough to be a problem. It threatens rather than swinging:
+        // swinging belongs to EnemyActor, and by this range the encounter
+        // trigger has almost always handed it over to the battle already.
         this.state = 'threaten';
       } else {
         this.state = 'react';

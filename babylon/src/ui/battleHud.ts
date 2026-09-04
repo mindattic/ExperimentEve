@@ -20,7 +20,11 @@ export class BattleHud {
   private readonly barTop: HTMLDivElement;
   private readonly barBottom: HTMLDivElement;
   private readonly floaterLayer: HTMLDivElement;
+  private readonly hurtVignette: HTMLDivElement;
   private messageTimer = 0;
+  private hurtLife = 0;
+  private hurtDuration = 1;
+  private hurtPeak = 0;
   private floaters: { el: HTMLDivElement; life: number }[] = [];
 
   constructor(private readonly root: HTMLElement) {
@@ -103,6 +107,23 @@ export class BattleHud {
     this.floaterLayer.style.cssText =
       'position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:8';
     root.appendChild(this.floaterLayer);
+
+    // Getting bitten reads at the edges of the frame, not in the middle of it:
+    // the HP bar is where you check the damage, this is where you feel it.
+    this.hurtVignette = document.createElement('div');
+    this.hurtVignette.style.cssText =
+      'position:absolute;inset:0;pointer-events:none;z-index:9;opacity:0;' +
+      'background:radial-gradient(ellipse at center,rgba(120,0,0,0) 34%,rgba(150,6,6,.55) 78%,' +
+      'rgba(70,0,0,.9) 100%)';
+    root.appendChild(this.hurtVignette);
+  }
+
+  /** `severity` 0..1 — how much of her that blow was worth. */
+  hurtFlash(severity: number): void {
+    this.hurtPeak = Math.min(0.72, 0.28 + severity * 0.44);
+    this.hurtDuration = 0.5 + severity * 0.35;
+    this.hurtLife = this.hurtDuration;
+    this.hurtVignette.style.opacity = `${this.hurtPeak}`;
   }
 
   setVisible(on: boolean): void {
@@ -169,6 +190,12 @@ export class BattleHud {
       this.messageTimer -= realDt;
       if (this.messageTimer <= 0) this.messageEl.style.opacity = '0';
     }
+    if (this.hurtLife > 0) {
+      this.hurtLife -= realDt;
+      // Squared falloff: it slams on and bleeds off, rather than dissolving.
+      const k = Math.max(0, this.hurtLife) / this.hurtDuration;
+      this.hurtVignette.style.opacity = `${this.hurtPeak * k * k}`;
+    }
     for (const floater of [...this.floaters]) {
       floater.life += realDt;
       const k = floater.life / 1.1;
@@ -185,7 +212,7 @@ export class BattleHud {
   dispose(): void {
     for (const el of [
       this.gauges, this.menuEl, this.messageEl, this.sweepH, this.sweepV,
-      this.barTop, this.barBottom, this.floaterLayer,
+      this.barTop, this.barBottom, this.floaterLayer, this.hurtVignette,
     ]) {
       el.remove();
     }

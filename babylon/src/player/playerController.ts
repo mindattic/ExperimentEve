@@ -58,6 +58,32 @@ export class PlayerController {
     return this.iFrames > 0;
   }
 
+  /**
+   * Where the round leaves from. There is no weapon model yet, so this is her
+   * right hand at shoulder height rather than a bone lookup — but the muzzle
+   * flash and the tracer both start here, and at fixed-camera distance the
+   * difference between an authored offset and a real socket is nothing.
+   */
+  muzzlePoint(into: Vector3): Vector3 {
+    const sin = Math.sin(this.facing);
+    const cos = Math.cos(this.facing);
+    const pos = this.node.position;
+    return into.set(
+      pos.x + sin * 0.34 + cos * 0.16,
+      pos.y + (this.sliding ? 0.86 : 1.24),
+      pos.z + cos * 0.34 - sin * 0.16,
+    );
+  }
+
+  /** Snap her onto a target — she does not fire over her own shoulder. */
+  faceToward(x: number, z: number): void {
+    const dx = x - this.node.position.x;
+    const dz = z - this.node.position.z;
+    if (Math.abs(dx) + Math.abs(dz) < 1e-4) return;
+    this.facing = Math.atan2(dx, dz);
+    this.node.rotation.y = this.facing;
+  }
+
   get dodging(): boolean {
     return this.dodgeTimer > 0;
   }
