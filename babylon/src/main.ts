@@ -1,4 +1,5 @@
 import { PointLight, Scene } from '@babylonjs/core';
+import { Creature, type SpeciesId } from './enemies/creature';
 import { FixedCameraDirector } from './camera/fixedCamera';
 import { MovementBasis } from './camera/movementBasis';
 import { Input } from './core/input';
@@ -83,6 +84,24 @@ for (const [lx, lz, ry] of LAMP_PLACEMENTS) {
 void placeModels(scene, LEVEL01_PROPS, (meshes) => {
   for (const mesh of meshes) rendering.shadows.addShadowCaster(mesh);
 });
+
+// Ambient wildlife: the Chimera Ecology's own simulation is EVEGDD chapter 4,
+// so for now these stand and idle where the bestiary says their kin belong.
+const creatures: Creature[] = [];
+const AMBIENT: [SpeciesId, number, number, number][] = [
+  ['rat', -3.2, -12.6, 1.2],      // south street trash
+  ['rat', -2.6, -11.9, -0.4],
+  ['spider', 24.2, -15.4, 2.1],   // the corridor, behind the dog fence
+  ['frog', -0.6, -9.4, 0.6],      // frog street, which is named for a reason
+  ['frog', 1.4, -10.8, -1.9],
+  ['wasp', -12.3, 16.8, 0],       // the nest on the west fence
+];
+for (const [species, x, z, facing] of AMBIENT) {
+  void Creature.spawn(scene, species, x, z, facing).then((creature) => {
+    creatures.push(creature);
+    for (const mesh of creature.meshes) rendering.shadows.addShadowCaster(mesh);
+  });
+}
 
 // Every point light in the scene — lamps, lit windows, storefront signs — is
 // managed by the rig, which keeps only the nearest handful switched on.
@@ -193,7 +212,16 @@ window.addEventListener('resize', () => engine.resize());
       time: worldClock.timeString,
       darkness: worldClock.darkness,
       characterLoaded: character !== null,
+      creatures: creatures.length,
     };
+  },
+  get creatures() {
+    return creatures.map((c) => ({
+      species: c.species,
+      x: c.root.position.x,
+      z: c.root.position.z,
+      clips: c.clipNames,
+    }));
   },
   get characterDebug() {
     return character?.debug ?? null;

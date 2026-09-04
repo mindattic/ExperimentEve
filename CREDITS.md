@@ -22,6 +22,14 @@
   order, so the clips and the hair's skinning apply with no retargeting.
   Her clothes are not from the (medieval-only) outfit pack — they are painted
   into her albedo procedurally by `babylon/src/player/outfit.ts`.
+- **Quaternius — LowPoly Animated Easy Enemies / Monsters / Fish**
+  (https://quaternius.com), CC0 1.0. In `public/models/creatures/`: Frog, Rat,
+  Snake, Spider, Wasp, Bat, Slime, Fish1, Fish2, Shark, Manta ray — each with
+  its own rig and its own clips (Idle/Walk/Attack/Death on the land animals,
+  Swim or Flying on the rest). Those packs ship `.blend`/`.fbx`/`.obj` only, so
+  the `.glb` files here were exported from the pack `.blend` sources with
+  Blender 3.3 headless (skins + all actions): Babylon has no FBX loader, and
+  `.obj` carries no rig. Loaded by `babylon/src/enemies/creature.ts`.
 - All other meshes are procedural primitives, all audio is synthesized at
   runtime (WebAudio), and all textures outside the kits are generated at
   load time onto canvases.
