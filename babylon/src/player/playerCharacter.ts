@@ -91,8 +91,14 @@ export class PlayerCharacter {
     const modelRoot = body.meshes.find((m) => !m.parent) ?? body.meshes[0]!;
     modelRoot.parent = character.root;
     modelRoot.position.setAll(0);
-    modelRoot.rotationQuaternion = null;
-    modelRoot.rotation.setAll(0);
+    // Its rotation is NOT ours to clear. The glTF loader parks the
+    // right-to-left-handed conversion on this __root__ as a 180 degree Y
+    // rotation together with a mirrored Z; the two compose to a plain X mirror.
+    // Zeroing the rotation while leaving the mirror in place — which is what
+    // any innocent-looking `rotation.setAll(0)` here does — keeps half of a
+    // conversion and renders her facing exactly backwards, so she walks away
+    // from wherever she is heading. Our own transform belongs on character.root,
+    // which is a node we made, one level up.
 
     for (const mesh of body.meshes) {
       mesh.receiveShadows = true;

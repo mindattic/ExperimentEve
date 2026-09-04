@@ -73,7 +73,14 @@ export class Creature {
       true,
       { doNotInstantiate: true },
     );
-    const root = (entries.rootNodes[0] ?? new TransformNode(species, scene)) as TransformNode;
+    // Our transform goes on a wrapper ABOVE the model, never on the model's own
+    // __root__. That node carries the loader's right-to-left-handed conversion
+    // (a 180 degree Y rotation plus a mirrored Z, which compose to an X mirror),
+    // and writing a facing straight onto it deletes the conversion: clearing
+    // both halves, as this used to, renders every animal mirrored, and clearing
+    // only one renders it backwards. Neither is ours to spend.
+    const root = new TransformNode(`${species}-pivot`, scene);
+    for (const node of entries.rootNodes) node.parent = root;
     root.rotationQuaternion = null;
     root.rotation.set(0, facing, 0);
     root.position.setAll(0);

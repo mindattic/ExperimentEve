@@ -279,8 +279,11 @@ engine.runRenderLoop(() => {
   rendering.followShadows(player.position);
   rendering.setFisheye(director.fisheye);
 
+  // The pad line is not decoration: "is the controller working" is otherwise
+  // unanswerable from inside the game, and the answer is usually that the
+  // browser cannot see the device at all.
   watch.textContent = `${worldClock.timeString}${timeAccelerated ? '  x120' : ''}\n${
-    director.activeZone?.id ?? '—'}`;
+    director.activeZone?.id ?? '—'}\n${sample.padConnected ? 'PAD' : 'no pad'}`;
   watch.style.whiteSpace = 'pre';
 
   scene.render();
@@ -322,6 +325,10 @@ window.addEventListener('resize', () => engine.resize());
   },
   get characterDebug() {
     return character?.debug ?? null;
+  },
+  input,
+  get padDebug() {
+    return input.padDebug;
   },
   battle,
   // `state` is already the harness's snapshot getter; the run's own state

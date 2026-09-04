@@ -54,11 +54,52 @@ export class Input {
     window.addEventListener('blur', () => this.keys.clear());
   }
 
+  /**
+   * The pad we're driving from. A 'standard'-mapping pad wins outright: the
+   * button indices below are the standard mapping's, and a DirectInput or
+   * vendor-specific pad reporting mapping '' numbers its buttons however it
+   * likes. Taking merely the first connected slot would let a phantom or a
+   * wheel shadow the real controller.
+   *
+   * Nothing appears here until the browser has seen a button pressed on the pad
+   * while the page is focused — that's the Gamepad API's own privacy gate, not
+   * something this code can opt out of.
+   */
   private pad(): Gamepad | null {
+    let fallback: Gamepad | null = null;
     for (const gp of navigator.getGamepads()) {
-      if (gp && gp.connected) return gp;
+      if (!gp || !gp.connected) continue;
+      if (gp.mapping === 'standard') return gp;
+      fallback ??= gp;
     }
-    return null;
+    return fallback;
+  }
+
+  /** What the browser can actually see, for when a pad "doesn't work". */
+  get padDebug(): unknown {
+    const pads = [];
+    for (const gp of navigator.getGamepads()) {
+      if (!gp) continue;
+      pads.push({
+        index: gp.index,
+        id: gp.id,
+        mapping: gp.mapping,
+        connected: gp.connected,
+        axes: gp.axes.map((a) => Number(a.toFixed(2))),
+        pressed: gp.buttons.map((b, i) => (b.pressed ? i : -1)).filter((i) => i >= 0),
+      });
+    }
+    return {
+      visibleToBrowser: pads.length,
+      using: this.pad()?.id ?? null,
+      pads,
+      note: pads.length === 0
+        ? 'Press a button ON THE PAD with the game window focused — browsers hide '
+          + 'gamepads until then. If it still shows nothing, something upstream is '
+          + 'holding the device (Steam Input desktop mode maps sticks to the mouse '
+          + 'cursor, which matches the symptom exactly).'
+        : 'Pad is visible to the page.',
+    };
   }
 
   rumble(durationMs: number, weak: number, strong: number): void {
