@@ -204,6 +204,28 @@ export class WorldAI {
     for (const wanderer of this.wanderers) wanderer.update(dt, player, colliders);
   }
 
+  /** Creatures within `radius` of a point — the encounter trigger's eyes. */
+  near(point: Vector3, radius: number): Creature[] {
+    const found: Creature[] = [];
+    for (const wanderer of this.wanderers) {
+      const dx = wanderer.position.x - point.x;
+      const dz = wanderer.position.z - point.z;
+      if (Math.hypot(dx, dz) <= radius) found.push(wanderer.creature);
+    }
+    return found;
+  }
+
+  /** Stop simulating one: the battle system is driving it now. */
+  detach(creature: Creature): void {
+    this.wanderers = this.wanderers.filter((w) => w.creature !== creature);
+  }
+
+  /** Take a survivor back into the world sim, where it stands. */
+  attach(creature: Creature): void {
+    if (this.wanderers.some((w) => w.creature === creature)) return;
+    this.wanderers.push(new Wanderer(creature, PROFILES[creature.species]));
+  }
+
   get population(): number {
     return this.wanderers.length;
   }

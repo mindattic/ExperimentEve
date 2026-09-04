@@ -1,10 +1,16 @@
-import { PointLight, Scene } from '@babylonjs/core';
+import { PointLight, Scene, Vector3 } from '@babylonjs/core';
+import { BattleSystem } from './battle/battleSystem';
 import { type Creature, type SpeciesId } from './enemies/creature';
+import { canFight, EnemyActor } from './enemies/enemyActor';
 import { WorldAI } from './enemies/worldAI';
 import { FixedCameraDirector } from './camera/fixedCamera';
 import { MovementBasis } from './camera/movementBasis';
+import { GameClock } from './core/clock';
 import { Input } from './core/input';
 import { WorldClock } from './core/worldClock';
+import { GameState } from './gameplay/gameState';
+import { BattleHud } from './ui/battleHud';
+import { projectToScreen } from './ui/screen';
 import { LEVEL01 } from './level/level01';
 import { buildLevel } from './level/levelBuilder';
 import { SurfaceLibrary } from './level/materials';
@@ -123,6 +129,37 @@ player.facing = LEVEL01.playerFacing;
 const input = new Input();
 const basis = new MovementBasis();
 const worldClock = new WorldClock();
+const gameClock = new GameClock();
+const state = new GameState();
+
+// EVEGDD Ch.3: the ATB battle. It borrows creatures from the world sim for the
+// duration of a fight and hands the survivors back.
+const battleHud = new BattleHud(hudRoot);
+const battle = new BattleSystem(state, scene, battleHud);
+battle.onEnd = (participants) => {
+  for (const actor of participants) {
+    if (actor.dead) actor.dispose();
+    else worldAI.attach(actor.creature);
+  }
+};
+battle.onKill = () => director.addShake(0.35);
+battle.onDefeat = () => {
+  battleHud.message('KINGSPORT KEEPS HER.');
+  state.hp = state.maxHp;
+};
+
+/** Anything hostile this close starts a fight — it doesn't wait to be asked. */
+const ENCOUNTER_RANGE = 2.6;
+function checkEncounter(): void {
+  if (battle.active) return;
+  const actors: EnemyActor[] = [];
+  for (const creature of worldAI.near(player.position, ENCOUNTER_RANGE)) {
+    if (!canFight(creature.species)) continue;
+    worldAI.detach(creature);
+    actors.push(new EnemyActor(creature));
+  }
+  if (actors.length > 0) battle.start(actors);
+}
 
 let character: PlayerCharacter | null = null;
 void PlayerCharacter.load(scene, player.node).then((loaded) => {
@@ -143,14 +180,18 @@ hint.style.cssText =
   'position:absolute;left:18px;bottom:14px;font:400 12px/1.5 "Courier New",monospace;' +
   'color:#aab2ba;opacity:0.75';
 hint.textContent =
-  'WASD / stick move · Shift walk · Space dodge (walk+dodge = knee slide) · E bicycle · T time x120';
+  'WASD move · Shift walk · Space dodge · Enter confirm · Arrows navigate · E bicycle · T time x120';
 hudRoot.appendChild(hint);
 
 let timeAccelerated = false;
 let lastTimeKey = false;
 
 engine.runRenderLoop(() => {
-  const dt = Math.min(0.05, engine.getDeltaTime() / 1000);
+  // Menus and the Precision Aim sweeps stop the world without stopping the
+  // frame: gameDt goes to zero, realDt keeps running.
+  gameClock.timeScale = battle.wantsPause ? 0 : 1;
+  const { realDt, gameDt } = gameClock.tick();
+  const dt = realDt;
 
   // Dev knob: T fast-forwards the night so the lighting ramp is inspectable.
   const timeKey = input.isDown('KeyT');
@@ -160,7 +201,7 @@ engine.runRenderLoop(() => {
   }
   lastTimeKey = timeKey;
 
-  worldClock.tick(dt);
+  worldClock.tick(realDt);
   rendering.applyTimeOfDay(worldClock.darkness);
 
   // The lamp over the protest field is dying. It has been dying all night.
@@ -172,18 +213,25 @@ engine.runRenderLoop(() => {
   }
 
   const sample = input.sample();
-  const moveDir = basis.update(sample, director.activeZone, dt);
+  // While the battle owns her turn she is rooted; the basis still tracks the
+  // camera so movement resumes pointing the way she's looking.
+  const canMove = !battle.active || battle.playerControlled;
+  const moveDir = basis.update(sample, director.activeZone, realDt);
+  const moveIntent = canMove ? moveDir : null;
 
-  if (sample.dodgeJust) {
+  if (canMove && sample.dodgeJust) {
     const slide = moveDir !== null && sample.magnitude < 0.6;
     player.dodge(moveDir, slide);
   }
-  if (sample.interactJust) player.riding = !player.riding;
+  if (!battle.active && sample.interactJust) player.riding = !player.riding;
 
-  player.update(dt, moveDir, sample.magnitude, level.colliders);
-  character?.update(dt, player.speed, player.dodgeProgress, player.sliding);
+  player.update(gameDt, moveIntent, canMove ? sample.magnitude : 0, level.colliders);
+  character?.update(realDt, player.speed, player.dodgeProgress, player.sliding);
 
-  worldAI.update(dt, player.position, level.colliders);
+  battle.update(realDt, gameDt, sample, player, director.camera);
+  battleHud.update(realDt);
+  checkEncounter();
+  worldAI.update(gameDt, player.position, level.colliders);
   lightRig.update(player.position);
   director.update(player.position, player.velocity, dt);
   rendering.followShadows(player.position);
@@ -221,6 +269,9 @@ window.addEventListener('resize', () => engine.resize());
       darkness: worldClock.darkness,
       characterLoaded: character !== null,
       creatures: creatures.length,
+      phase: battle.phase,
+      hp: Math.round(state.hp),
+      atb: Number(battle.atbFraction.toFixed(2)),
     };
   },
   worldAI,
@@ -229,6 +280,28 @@ window.addEventListener('resize', () => engine.resize());
   },
   get characterDebug() {
     return character?.debug ?? null;
+  },
+  battle,
+  // `state` is already the harness's snapshot getter; the run's own state
+  // lives under its own name.
+  gameState: state,
+  get battleDebug() {
+    return battle.debug;
+  },
+  /** World -> screen fractions, the same path the HUD and Precision Aim use. */
+  project(x: number, y: number, z: number) {
+    return projectToScreen(scene, new Vector3(x, y, z));
+  },
+  /** Force a fight with whatever is nearest — the harness needs a way in. */
+  startFight(radius = 14) {
+    const actors: EnemyActor[] = [];
+    for (const creature of worldAI.near(player.position, radius)) {
+      if (!canFight(creature.species)) continue;
+      worldAI.detach(creature);
+      actors.push(new EnemyActor(creature));
+    }
+    battle.start(actors);
+    return actors.length;
   },
   teleport(x: number, z: number) {
     player.position.set(x, player.floorY, z);

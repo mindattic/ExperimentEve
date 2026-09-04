@@ -74,14 +74,13 @@ uniform sampler2D textureSampler;
 uniform float amount;
 
 void main(void) {
-  vec2 c = vUV - 0.5;
+  // Pre-zoom by exactly what the distortion will push outward, so the warped
+  // sample never leaves the frame. Without this the corners sample off-texture
+  // and go black, which reads as a broken viewport, not as cheap glass.
+  vec2 c = (vUV - 0.5) / (1.0 + amount * 1.15);
   float r2 = dot(c, c);
-  // Barrel distortion: the cheap wide-angle glass in a 1998 security camera.
-  vec2 warped = c * (1.0 + amount * r2 * 2.2) + 0.5;
-  if (warped.x < 0.0 || warped.x > 1.0 || warped.y < 0.0 || warped.y > 1.0) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    return;
-  }
+  // Barrel distortion: the wide-angle glass in a 1998 security camera.
+  vec2 warped = clamp(c * (1.0 + amount * r2 * 2.2) + 0.5, 0.0, 1.0);
   vec3 col = texture2D(textureSampler, warped).rgb;
   // Corner falloff and a touch of green bias — videotape, not film.
   float vig = smoothstep(0.85, 0.15, r2 * 1.6);
