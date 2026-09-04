@@ -51,7 +51,7 @@ const DUSK = {
   hemiGround: new Color3(0.2, 0.17, 0.15),
   fog: new Color3(0.36, 0.33, 0.35),
   moonIntensity: 2.4,
-  hemiIntensity: 0.85,
+  hemiIntensity: 1.15,
   fogDensity: 0.012,
 };
 
@@ -59,11 +59,11 @@ const NIGHT = {
   skyTop: new Color3(0.014, 0.018, 0.038),
   skyHorizon: new Color3(0.05, 0.07, 0.12),
   moon: new Color3(0.62, 0.72, 1.0),
-  hemiSky: new Color3(0.07, 0.09, 0.16),
-  hemiGround: new Color3(0.02, 0.02, 0.03),
+  hemiSky: new Color3(0.11, 0.14, 0.22),
+  hemiGround: new Color3(0.035, 0.04, 0.05),
   fog: new Color3(0.035, 0.045, 0.07),
   moonIntensity: 0.85,
-  hemiIntensity: 0.3,
+  hemiIntensity: 0.52,
   fogDensity: 0.03,
 };
 
@@ -104,7 +104,7 @@ export function createEngine(canvas: HTMLCanvasElement): Engine {
 
 export function createRendering(engine: Engine, scene: Scene, camera: Camera): Rendering {
   scene.clearColor = new Color4(0.01, 0.012, 0.02, 1);
-  scene.ambientColor = new Color3(0.05, 0.06, 0.09);
+  scene.ambientColor = new Color3(0.08, 0.09, 0.13);
 
   const hemi = new HemisphericLight('hemi', new Vector3(0, 1, 0), scene);
   const moon = new DirectionalLight('moon', new Vector3(-0.45, -1, -0.35).normalize(), scene);
@@ -131,7 +131,7 @@ export function createRendering(engine: Engine, scene: Scene, camera: Camera): R
   probe.renderList?.push(skybox);
   probe.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
   scene.environmentTexture = probe.cubeTexture as unknown as CubeTexture;
-  scene.environmentIntensity = 0.6;
+  scene.environmentIntensity = 0.85;
 
   scene.fogMode = Scene.FOGMODE_EXP2;
 

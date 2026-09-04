@@ -272,10 +272,10 @@ function paintConcrete(ctx: CanvasRenderingContext2D, rand: () => number): void 
 }
 
 function paintAsphalt(ctx: CanvasRenderingContext2D, rand: () => number): void {
-  ctx.fillStyle = '#26272b';
+  ctx.fillStyle = '#34363c';
   ctx.fillRect(0, 0, SIZE, SIZE);
   noiseOverlay(ctx, rand, 4200, 2.6, 0.16, [92, 94, 100]);
-  noiseOverlay(ctx, rand, 1800, 2, 0.14, [10, 10, 12]);
+  noiseOverlay(ctx, rand, 1800, 2, 0.09, [10, 10, 12]);
   for (let i = 0; i < 9; i++) {
     ctx.strokeStyle = `rgba(12,12,14,${(rand() * 0.5 + 0.3).toFixed(3)})`;
     ctx.lineWidth = rand() * 1.8 + 0.5;

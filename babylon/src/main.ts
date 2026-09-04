@@ -1,5 +1,6 @@
 import { PointLight, Scene } from '@babylonjs/core';
-import { Creature, type SpeciesId } from './enemies/creature';
+import { type Creature, type SpeciesId } from './enemies/creature';
+import { WorldAI } from './enemies/worldAI';
 import { FixedCameraDirector } from './camera/fixedCamera';
 import { MovementBasis } from './camera/movementBasis';
 import { Input } from './core/input';
@@ -85,19 +86,25 @@ void placeModels(scene, LEVEL01_PROPS, (meshes) => {
   for (const mesh of meshes) rendering.shadows.addShadowCaster(mesh);
 });
 
-// Ambient wildlife: the Chimera Ecology's own simulation is EVEGDD chapter 4,
-// so for now these stand and idle where the bestiary says their kin belong.
+// The district's wildlife, living on its own account (EVEGDD Ch.4, wandering
+// and reaction layer). Placed where the bestiary says their kin belong.
+const worldAI = new WorldAI(scene);
 const creatures: Creature[] = [];
 const AMBIENT: [SpeciesId, number, number, number][] = [
   ['rat', -3.2, -12.6, 1.2],      // south street trash
   ['rat', -2.6, -11.9, -0.4],
+  ['rat', 3.0, -4.2, 2.6],        // the other trash can
   ['spider', 24.2, -15.4, 2.1],   // the corridor, behind the dog fence
+  ['spider', 20.6, -12.4, -1.1],  // the pocket yard
   ['frog', -0.6, -9.4, 0.6],      // frog street, which is named for a reason
   ['frog', 1.4, -10.8, -1.9],
+  ['frog', -1.8, -14.2, 2.2],
+  ['snake', -9.4, -21.6, 0.4],    // the blockade, under the pylons
   ['wasp', -12.3, 16.8, 0],       // the nest on the west fence
+  ['bat', 8.4, 26.2, 1.5],        // over the billboard
 ];
 for (const [species, x, z, facing] of AMBIENT) {
-  void Creature.spawn(scene, species, x, z, facing).then((creature) => {
+  void worldAI.spawn(species, x, z, facing).then((creature) => {
     creatures.push(creature);
     for (const mesh of creature.meshes) rendering.shadows.addShadowCaster(mesh);
   });
@@ -176,6 +183,7 @@ engine.runRenderLoop(() => {
   player.update(dt, moveDir, sample.magnitude, level.colliders);
   character?.update(dt, player.speed, player.dodgeProgress, player.sliding);
 
+  worldAI.update(dt, player.position, level.colliders);
   lightRig.update(player.position);
   director.update(player.position, player.velocity, dt);
   rendering.followShadows(player.position);
@@ -215,13 +223,9 @@ window.addEventListener('resize', () => engine.resize());
       creatures: creatures.length,
     };
   },
+  worldAI,
   get creatures() {
-    return creatures.map((c) => ({
-      species: c.species,
-      x: c.root.position.x,
-      z: c.root.position.z,
-      clips: c.clipNames,
-    }));
+    return worldAI.census;
   },
   get characterDebug() {
     return character?.debug ?? null;
