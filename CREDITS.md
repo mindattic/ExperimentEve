@@ -14,9 +14,17 @@
   Used by `src/dev/characterPreview.ts`, a standalone full-fidelity PBR
   character preview (WASD locomotion, retargeted Idle/Walk/Run) kept
   separate from the PS1 game pipeline — see `character-preview.html`.
-- All other meshes are procedural (Three.js primitives), all audio is
-  synthesized at runtime (WebAudio), all textures outside the kit are
-  generated CanvasTextures.
+- **Quaternius — Universal Base Characters** and **Universal Animation
+  Library** (https://quaternius.com), CC0 1.0. In `public/models/kat/`: the
+  female base body, the `Hair_Long` mesh, and `UAL1_Standard.glb` (43 clips).
+  Used as Kat in the Babylon build (`babylon/src/player/playerCharacter.ts`).
+  Chosen as a pair because both ship the *same* 65-joint rig in the same joint
+  order, so the clips and the hair's skinning apply with no retargeting.
+  Her clothes are not from the (medieval-only) outfit pack — they are painted
+  into her albedo procedurally by `babylon/src/player/outfit.ts`.
+- All other meshes are procedural primitives, all audio is synthesized at
+  runtime (WebAudio), and all textures outside the kits are generated at
+  load time onto canvases.
 - Asset pipeline: GLB → `src/level/props/modelLoader.ts` → PS1 shader
   conversion (vertex snap, affine UVs, nearest-filter). Candidate future
   sources: Kenney/Quaternius CC0 packs, Polyfork (polyfork.dev), AI-generated
